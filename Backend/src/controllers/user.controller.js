@@ -1,6 +1,6 @@
 import { User } from "../models/user.model.js";
 import { Review } from "../models/review.model.js";
-import { BlacklistRefreshToken } from "../models/blacklistRefreshToken.model.js";
+import { BlacklistRefreshToken } from "../models/blacklistedRefreshToken.model.js";
 import { uploadCloudinary, deleteCloudinary } from "../utils/cloudinary.js";
 import { sendOtp } from "../utils/sendOtp.js";
 import mongoose from "mongoose";
