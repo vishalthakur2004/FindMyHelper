@@ -34,12 +34,6 @@ const userSchema = new mongoose.Schema(
       },
       enum: ['plumber', 'electrician', 'carpenter', 'painter'],
     },
-    aadharId: {
-      type: String,
-      required: function () {
-        return this.role === 'worker';
-      },
-    },
     photo: {
       type: String,
       required: function () {

@@ -40,15 +40,14 @@ export const sendOtpToPhone = async (req, res) => {
 
 export const registerUser = async (req, res) => {
     try {
+      const { phoneNumber, otp } = req.body;
 
-      const { phone, otp } = req.body;
-
-      if (!phone || !otp) {
+      if (!phoneNumber || !otp) {
         return res.status(400).json({ message: "Phone and OTP are required" });
       }
 
       // Use Twilio to verify the OTP
-      const verified = await sendOtp(phone, otp, true); // 'true' indicates verification mode
+      const verified = await sendOtp(phoneNumber, otp, true); // 'true' indicates verification mode
 
       if (!verified) {
         return res.status(400).json({ message: "Invalid or expired OTP" });
@@ -58,11 +57,8 @@ export const registerUser = async (req, res) => {
         fullName,
         email,
         password,
-        phoneNumber,
         role,
         profession,
-        aadharId,
-        photo,
         address,
         availabilityTimes,
       } = req.body;
@@ -71,7 +67,7 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ message: 'Role is required' });
       }
       if(role === 'worker') {
-        if(!fullName || !email || !password || !role || !profession || !aadharId || !photo || !address || !availabilityTimes) {
+        if(!fullName || !email || !password || !role || !profession || !address || !availabilityTimes) {
           return res.status(400).json({ message: 'All fields are required' });
         }
       }
@@ -84,6 +80,7 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ message: 'Photo is required' });
       }
 
+      let photo = null;
       if(photoPath) {
         const result = await uploadCloudinary(photoPath);
         photo = result.url;
@@ -102,10 +99,8 @@ export const registerUser = async (req, res) => {
         role,
         phoneNumber,
         profession,
-        aadharId,
         photo,
         address,
-        location,
         availabilityTimes
       });
   
@@ -141,10 +136,18 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
     try {
-      const { emailOrPhone, password } = req.body;
+      const { phoneNumber, email, password } = req.body;
+
+      if (!phoneNumber && !email) {
+        return res.status(400).json({ message: 'Phone or email is required' });
+      }
+  
+      if (!password) {
+        return res.status(400).json({ message: 'Password is required' });
+      }
   
       const user = await User.findOne({
-        $or: [{ email: emailOrPhone }, { phoneNumber: emailOrPhone }],
+        $or: [{ email }, { phoneNumber }],
       });
   
       if (!user || !(await user.isPasswordCorrect(password))) {
@@ -187,8 +190,13 @@ export const logoutUser = async (req, res) => {
     if (!refreshToken) {
       return res.status(400).json({ message: 'No refresh token found in cookies' });
     }
+    
+    const blacklisted = await BlacklistRefreshToken.findOne({ token: refreshToken });
+    if (blacklisted) {
+      return res.status(400).json({ message: 'Token is already blacklisted' });
+    }
 
-    await BlacklistRefreshToken.create({ token: refreshToken });
+    await BlacklistRefreshToken.create({ refreshToken });
 
     res.clearCookie('refreshToken', {
       httpOnly: true,
