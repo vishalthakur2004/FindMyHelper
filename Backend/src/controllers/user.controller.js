@@ -218,14 +218,14 @@ export const refreshAccessToken = async (req, res) => {
       return res.status(401).json({ message: 'No refresh token provided' });
     }
 
-    const blacklisted = await BlacklistRefreshToken.findOne({ token: refreshToken });
+    const blacklisted = await BlacklistRefreshToken.findOne({ refreshToken });
     if (blacklisted) {
       return res.status(403).json({ message: 'Token is blacklisted' });
     }
 
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded._id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -277,6 +277,7 @@ export const updateAccountDetails = async (req, res) => {
       fullName,
       email,
       address,
+      role,
       profession,
       availabilityTimes,
     } = req.body;
@@ -285,6 +286,7 @@ export const updateAccountDetails = async (req, res) => {
       ...(fullName && { fullName }),
       ...(email && { email }),
       ...(address && { address }),
+      ...(role && { role }),
       ...(profession && { profession }),
       ...(availabilityTimes && { availabilityTimes }),
     };
@@ -347,7 +349,7 @@ export const updateProfilePhoto = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password -refreshToken');
+    const user = await User.findById(req.user._id).select('-password -refreshToken');
     if (!user) return res.status(404).json({ message: 'User not found' });
 
     let reviews = [];
