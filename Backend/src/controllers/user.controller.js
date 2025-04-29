@@ -3,6 +3,7 @@ import { Review } from "../models/review.model.js";
 import { BlacklistRefreshToken } from "../models/blacklistedRefreshToken.model.js";
 import { uploadCloudinary, deleteCloudinary } from "../utils/cloudinary.js";
 import { sendOtp } from "../utils/sendOtp.js";
+import { createPhoneToken, verifyPhoneToken } from "../utils/phoneToken.js";
 import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
@@ -38,19 +39,40 @@ export const sendOtpToPhone = async (req, res) => {
   }
 };
 
+export const verifyOtp = async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      return res.status(400).json({ message: "Phone and OTP are required" });
+    }
+
+    const verified = await sendOtp(phone, otp, true);
+
+    if (!verified) {
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+    }
+
+    const token = createPhoneToken(phone);
+    return res.status(200).json({ token, message: "Phone number verified successfully" });
+  } catch (error) {
+    console.error("Verify OTP error:", error);
+    return res.status(500).json({ message: "Failed to verify OTP" });
+  }
+}
+
 export const registerUser = async (req, res) => {
     try {
-      const { phoneNumber, otp } = req.body;
+      const { phoneNumber, token } = req.body;
 
-      if (!phoneNumber || !otp) {
-        return res.status(400).json({ message: "Phone and OTP are required" });
+      if (!phoneNumber || !token) {
+        return res.status(400).json({ message: "Phone and Verification token are required" });
       }
 
-      // Use Twilio to verify the OTP
-      const verified = await sendOtp(phoneNumber, otp, true); // 'true' indicates verification mode
+      const decodedPhoneNumber = await verifyPhoneToken(token);
 
-      if (!verified) {
-        return res.status(400).json({ message: "Invalid or expired OTP" });
+      if(decodedPhoneNumber !== phoneNumber) {
+        return res.status(400).json({ message: "Invalid or expired verification token" });
       }
 
       const {

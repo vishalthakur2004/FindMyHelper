@@ -2,6 +2,7 @@ import express from "express";
 import {
   checkAvailability,
   sendOtpToPhone,
+  verifyOtp,
   registerUser,
   loginUser,
   logoutUser,
@@ -20,6 +21,7 @@ const router = express.Router();
 // Public routes
 router.post("/check-availability", checkAvailability);
 router.post("/send-otp", sendOtpToPhone);
+router.post("/verify-otp", verifyOtp);
 router.post("/register", upload.single("photo"), registerUser);
 router.post("/login", loginUser);
 router.get("/refresh-token", refreshAccessToken);
