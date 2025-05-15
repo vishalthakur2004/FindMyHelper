@@ -11,14 +11,20 @@ export const authenticateUser = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-
-    if (!decoded) {
-      return res.status(401).json({ message: 'Invalid or expired token' });
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Access token expired' });
+      } else if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({ message: 'Invalid access token' });
+      } else {
+        return res.status(401).json({ message: 'Token verification failed' });
+      }
     }
 
     const user = await User.findById(decoded._id).select('-password -refreshToken');
-
     if (!user) {
       return res.status(401).json({ message: 'User not found' });
     }
@@ -27,6 +33,6 @@ export const authenticateUser = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Authentication error:', error);
-    return res.status(401).json({ message: 'Authentication failed' });
+    return res.status(500).json({ message: 'Internal server error during authentication' });
   }
 };
