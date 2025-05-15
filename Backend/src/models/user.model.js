@@ -2,6 +2,19 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
+const availabilitySchema = new mongoose.Schema(
+  {
+    day: {
+      type: String,
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      required: true,
+    },
+    startTime: { type: String, required: true },
+    endTime: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     fullName: {
@@ -70,25 +83,19 @@ const userSchema = new mongoose.Schema(
       },
     },
     address: {
-      street: String,
-      city: String,
-      state: String,
-      pincode: String,
+      required: true,
+      type: {
+        street: { type: String },
+        city: { type: String },
+        state: { type: String },
+        pincode: { type: String },
+      },
     },
     availabilityTimes: {
-      required: function() {
+      type: [availabilitySchema],
+      required: function () {
         return this.role === 'worker';
       },
-      type: [
-        {
-          day: {
-            type: String,
-            enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-          },
-          startTime: String, // e.g., "09:00"
-          endTime: String,   // e.g., "17:00"
-        }
-      ],
       default: [],
     },
     bookingsAday: {
@@ -155,3 +162,5 @@ userSchema.methods.generateRefreshToken = async function () {
 userSchema.index({ location: '2dsphere' });
 
 export const User = mongoose.model('User', userSchema);
+
+
