@@ -1,3 +1,4 @@
+
 import express from "express";
 import {
   checkAvailability,
@@ -24,10 +25,10 @@ router.post("/send-otp", sendOtpToPhone);
 router.post("/verify-otp", verifyOtp);
 router.post("/register", upload.single("photo"), registerUser);
 router.post("/login", loginUser);
-router.get("/refresh-token", refreshAccessToken);
+router.post("/refresh-token", refreshAccessToken);
+router.post("/logout", logoutUser);
 
 // Protected routes
-router.post("/logout", authenticateUser, logoutUser);
 router.post("/change-password", authenticateUser, changePassword);
 router.patch("/update-account", authenticateUser, updateAccountDetails);
 router.patch("/update-photo", authenticateUser, upload.single("photo"), updateProfilePhoto);
@@ -35,3 +36,4 @@ router.get("/me", authenticateUser, getCurrentUser);
 router.get("/worker/:workerId", getWorkerProfile);
 
 export default router;
+
