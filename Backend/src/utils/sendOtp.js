@@ -16,20 +16,18 @@ const client = twilio(accountSid, authToken);
  * @param {boolean} [isVerify] - true if verifying, false or undefined to send
  * @returns {Promise<boolean|void>}
  */
-export const sendOtp = async (phone, otp = null, isVerify = false) => {
+export const sendOtp = async (phoneNumber, otp = null, isVerify = false) => {
   try {
     if (isVerify) {
-      // ✅ Verify the OTP
       const verificationCheck = await client.verify.v2
         .services(verifySid)
-        .verificationChecks.create({ to: phone, code: otp });
+        .verificationChecks.create({ to: phoneNumber, code: otp });
 
       return verificationCheck.status === "approved";
     } else {
-      // 📤 Send the OTP
       await client.verify.v2
         .services(verifySid)
-        .verifications.create({ to: phone, channel: "sms" });
+        .verifications.create({ to: phoneNumber, channel: "sms" });
 
       return;
     }
