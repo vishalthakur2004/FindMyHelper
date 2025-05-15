@@ -9,14 +9,12 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
 export const checkAvailability = async (req, res) => {
-    const { email, phoneNumber } = req.body;
+    const { phoneNumber } = req.body;
   
-    const existingUser = await User.findOne({
-      $or: [{ email }, { phoneNumber }],
-    });
+    const existingUser = await User.findOne({ phoneNumber });
   
     if (existingUser) {
-      return res.status(400).json({ message: 'Email or phone already in use' });
+      return res.status(409).json({ message: 'Phone number already in use' });
     }
   
     return res.status(200).json({ message: 'Available' });
@@ -24,13 +22,13 @@ export const checkAvailability = async (req, res) => {
 
 export const sendOtpToPhone = async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phoneNumber } = req.body;
 
-    if (!phone) {
+    if (!phoneNumber) {
       return res.status(400).json({ message: "Phone number is required" });
     }
 
-    await sendOtp(phone); // Twilio sends OTP to the phone number
+    await sendOtp(phoneNumber); // Twilio sends OTP to the phone number
 
     return res.status(200).json({ message: "OTP sent successfully" });
   } catch (error) {
@@ -39,26 +37,25 @@ export const sendOtpToPhone = async (req, res) => {
   }
 };
 
-export const verifyOtp = async (req, res) => {
-  try {
-    const { phone, otp } = req.body;
+  export const verifyOtp = async (req, res) => {
+    try {
+      const { phoneNumber, otp } = req.body;
 
-    if (!phone || !otp) {
-      return res.status(400).json({ message: "Phone and OTP are required" });
+      if (!phoneNumber || !otp) {
+        return res.status(400).json({ message: "Phone and OTP are required" });
+      }
+      const verified = await sendOtp(phoneNumber, otp, true);
+
+      if (!verified) {
+        return res.status(400).json({ message: "Invalid or expired OTP" });
+      }
+
+      const token = createPhoneToken(phoneNumber);
+      return res.status(200).json({ token, message: "Phone number verified successfully" });
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      return res.status(500).json({ message: "Failed to verify OTP" });
     }
-
-    const verified = await sendOtp(phone, otp, true);
-
-    if (!verified) {
-      return res.status(400).json({ message: "Invalid or expired OTP" });
-    }
-
-    const token = createPhoneToken(phone);
-    return res.status(200).json({ token, message: "Phone number verified successfully" });
-  } catch (error) {
-    console.error("Verify OTP error:", error);
-    return res.status(500).json({ message: "Failed to verify OTP" });
-  }
 }
 
 export const registerUser = async (req, res) => {
@@ -97,7 +94,7 @@ export const registerUser = async (req, res) => {
         return res.status(400).json({ message: 'All fields are required' });
       }
 
-      const photoPath = req.file ? req.file.path : null;    
+      const photoPath = req.file ? req.file.path : null;
       if (!photoPath && role === 'worker') {
         return res.status(400).json({ message: 'Photo is required' });
       }
@@ -105,12 +102,25 @@ export const registerUser = async (req, res) => {
       let photo = null;
       if(photoPath) {
         const result = await uploadCloudinary(photoPath);
+        if (!result || !result.url) {
+          return res.status(500).json({ message: 'Failed to upload photo to Cloudinary' });
+        }
+
         photo = result.url;
       }
 
       if(role === 'worker') {
         if(!photo) {
           return res.status(400).json({ message: 'Failed to upload profile photo' });
+        }
+      }
+
+      let parsedAvailability = availabilityTimes;
+      if (typeof availabilityTimes === 'string') {
+        try {
+          parsedAvailability = JSON.parse(availabilityTimes);
+        } catch (e) {
+          return res.status(400).json({ message: 'Invalid availability format' });
         }
       }
   
@@ -123,7 +133,7 @@ export const registerUser = async (req, res) => {
         profession,
         photo,
         address,
-        availabilityTimes
+        availabilityTimes: parsedAvailability,
       });
   
       const accessToken = await user.generateAccessToken();
@@ -158,22 +168,24 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
     try {
-      const { phoneNumber, email, password } = req.body;
+      const { phoneNumber, password } = req.body;
 
-      if (!phoneNumber && !email) {
-        return res.status(400).json({ message: 'Phone or email is required' });
+      if (!phoneNumber) {
+        return res.status(400).json({ message: 'Phone number is required' });
       }
   
       if (!password) {
         return res.status(400).json({ message: 'Password is required' });
       }
   
-      const user = await User.findOne({
-        $or: [{ email }, { phoneNumber }],
-      });
+      const user = await User.findOne({ phoneNumber });
+
+      if(!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
   
-      if (!user || !(await user.isPasswordCorrect(password))) {
-        return res.status(401).json({ message: 'Invalid credentials' });
+      if(!user.isPasswordCorrect(password)) {
+        return res.status(401).json({ message: 'Wrong Password' });
       }
   
       const accessToken = await user.generateAccessToken();
@@ -184,8 +196,8 @@ export const loginUser = async (req, res) => {
 
       res.cookie('refreshToken', refreshToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'Strict',
+        secure: false,
+        sameSite: 'Lax',
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });     
   
@@ -208,28 +220,32 @@ export const loginUser = async (req, res) => {
 
 export const logoutUser = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.cookies?.refreshToken;
+
     if (!refreshToken) {
-      return res.status(400).json({ message: 'No refresh token found in cookies' });
+      return res.status(400).json({ message: "No refresh token provided" });
     }
-    
-    const blacklisted = await BlacklistRefreshToken.findOne({ token: refreshToken });
-    if (blacklisted) {
-      return res.status(400).json({ message: 'Token is already blacklisted' });
+
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
     }
 
     await BlacklistRefreshToken.create({ refreshToken });
 
-    res.clearCookie('refreshToken', {
+    user.refreshToken = null;
+    await user.save({ validateBeforeSave: false });
+
+    res.clearCookie("refreshToken", {
       httpOnly: true,
-      secure: true,
-      sameSite: 'Strict',
+      secure: false,
+      sameSite: "Lax",
     });
 
-    res.status(200).json({ message: 'Logout successful' });
+    res.status(200).json({ message: "Logout successful" });
   } catch (error) {
     console.error("Logout error:", error);
-    res.status(500).json({ message: 'Something went wrong' });
+    res.status(500).json({ message: "Something went wrong" });
   }
 };
 
@@ -527,4 +543,5 @@ export const getWorkerProfile = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
 
