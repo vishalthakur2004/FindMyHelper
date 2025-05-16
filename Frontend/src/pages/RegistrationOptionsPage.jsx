@@ -5,9 +5,10 @@ export default function RegisterOption() {
   const navigate = useNavigate();
   const location = useLocation();
   const { phoneNumber } = location.state || {};
+  const token = location.state?.token || null;
 
   if (!phoneNumber) {
-    navigate("/"); // fallback if no phone number
+    navigate("/");
     return null;
   }
 
@@ -18,13 +19,13 @@ export default function RegisterOption() {
         <div className="bg-white p-8 rounded-2xl shadow-md text-center max-w-md w-full">
           <h2 className="text-2xl font-bold mb-6 text-orange-500">Register As</h2>
           <button
-            onClick={() => navigate("/register-customer", { state: { phoneNumber } })}
+            onClick={() => navigate("/register-customer", { state: { phoneNumber, token } })}
             className="w-full mb-4 bg-orange-400 hover:bg-orange-500 text-white py-3 rounded-xl text-lg"
           >
             Customer
           </button>
           <button
-            onClick={() => navigate("/register-worker", { state: { phoneNumber } })}
+            onClick={() => navigate("/register-worker", { state: { phoneNumber, token } })}
             className="w-full bg-orange-400 hover:bg-orange-500 text-white py-3 rounded-xl text-lg"
           >
             Worker
