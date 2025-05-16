@@ -1,77 +1,70 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "../components/Navbar";
+import axios from "axios";
 
 export default function CheckPhoneNumber() {
+  const [phone, setPhone] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [error, setError] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [enteredOtp, setEnteredOtp] = useState("");
-  const [generatedOtp, setGeneratedOtp] = useState("");
+  const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const navigate = useNavigate();
 
-  const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
-
   const handleCheck = async () => {
-    if (phoneNumber.length !== 10) {
+    if (phone.length !== 10) {
       setError("Please enter a valid 10-digit phone number.");
       return;
     }
-
-    const fullPhoneNumber = "+91" + phoneNumber;
-
+  
+    const phoneNumber = "+91" + phone;
+    setPhoneNumber(phoneNumber);
+  
     try {
-      const isRegistered = await fakeCheckPhoneNumber(fullPhoneNumber);
+      await axios.post(`${import.meta.env.VITE_API_URL}/user/check-availability`, { phoneNumber });
+      await axios.post(`${import.meta.env.VITE_API_URL}/user/send-otp`, { phoneNumber });
 
-      if (isRegistered) {
+      setOtpSent(true);
+      setError("");
+      alert("OTP sent to your phone number");
+  
+    } catch (err) {
+      if (err.response && err.response.status === 409) {
         setError(
           <>
             Phone number already registered.{" "}
-            <a href="/login" className="text-orange-500 font-semibold underline hover:text-orange-600">
+            <Link href="/login" className="text-orange-500 font-semibold underline hover:text-orange-600">
               Login here
-            </a>.
+            </Link>.
           </>
         );
       } else {
-        const otp = generateOTP();
-        setGeneratedOtp(otp);
-        setOtpSent(true);
-        setError("");
-        alert("OTP sent to your phone: " + otp); // Simulate OTP sent
+        setError("Something went wrong. Please try again.");
       }
-    } catch (err) {
-      setError("Something went wrong. Please try again.");
+    }
+  };  
+
+  const handleVerifyOtp = async () => {
+    setIsVerifying(true);
+    const isVerified = await axios.post(`${import.meta.env.VITE_API_URL}/user/verify-otp`, { phoneNumber, otp });
+    setIsVerifying(false);
+    if (isVerified.status === 200) {
+      const token = isVerified.data?.token;
+      navigate("/register-option", { state: { phoneNumber, token } });
     }
   };
 
-  const handleVerifyOtp = () => {
-    setIsVerifying(true);
-    setTimeout(() => {
-      if (enteredOtp === generatedOtp) {
-        navigate("/register-option", { state: { phoneNumber } });
-      } else {
-        setError("Invalid OTP. Please try again.");
-      }
-      setIsVerifying(false);
-    }, 1000);
-  };
-
-  const handleResendOtp = () => {
-    const newOtp = generateOTP();
-    setGeneratedOtp(newOtp);
-    setEnteredOtp("");
-    setError("");
-    alert("New OTP sent: " + newOtp); // Simulate
-  };
-
-  const fakeCheckPhoneNumber = (number) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve(number === "+911234567890"); // Simulate only this number as registered
-      }, 1000);
-    });
+  const handleResendOtp = async () => {
+    try {
+      await axios.post(`${import.meta.env.VITE_API_URL}/user/send-otp`, { phoneNumber });
+      alert("OTP sent to your phone number");
+    } catch (err) {
+      alert("Something went wrong. Please try again.");
+      console.log(err);
+    }
   };
 
   return (
@@ -89,11 +82,11 @@ export default function CheckPhoneNumber() {
                 type="text"
                 placeholder="Phone Number"
                 className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 mb-4"
-                value={phoneNumber}
+                value={phone}
                 onChange={(e) => {
                   const value = e.target.value;
                   if (/^\d{0,10}$/.test(value)) {
-                    setPhoneNumber(value);
+                    setPhone(value);
                     setError("");
                   } else {
                     setError("Only digits are allowed.");
@@ -115,8 +108,8 @@ export default function CheckPhoneNumber() {
                 type="text"
                 placeholder="Enter OTP"
                 className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 mb-4"
-                value={enteredOtp}
-                onChange={(e) => setEnteredOtp(e.target.value)}
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
               />
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
 
