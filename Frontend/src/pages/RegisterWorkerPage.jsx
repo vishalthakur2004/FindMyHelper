@@ -1,15 +1,26 @@
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, set } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
+import { setUserInfo } from "../features/userSlice";
+import axios from "axios";
+import { useDispatch } from "react-redux";
 
 export default function RegisterWorker() {
   const { state } = useLocation();
   const phoneNumber = state?.phoneNumber;
+  const token = state?.token; 
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState(null);
+
+  const dispatch = useDispatch();
+
+  if (!phoneNumber) {
+    navigate("/");
+    return null;
+  }
 
   const {
     register,
@@ -24,46 +35,49 @@ export default function RegisterWorker() {
   });
 
   useEffect(() => {
-    // Add one availability field by default
     if (!showPassword && fields.length === 0) {
       append({ day: "", startTime: "", endTime: "" });
     }
   }, [showPassword]);
 
   const onInitialSubmit = (data) => {
-    setFormData({ ...data, phoneNumber });
+    setFormData({ ...data, role : "worker", phoneNumber, token });
     setShowPassword(true);
   };
 
   const onFinalSubmit = async (data) => {
-    const completeData = { ...formData, ...data };
-
-    const formPayload = new FormData();
-    for (const key in completeData) {
-      if (key === "photo" && completeData[key]?.[0]) {
-        formPayload.append(key, completeData[key][0]);
-      } else if (key === "availabilityTimes") {
-        formPayload.append(key, JSON.stringify(completeData[key]));
-      } else {
-        formPayload.append(key, completeData[key]);
-      }
-    }
-
-    console.log("Sending to backend:", completeData);
-
     try {
-      const response = await fetch("address", {
-        method: "POST",
-        body: formPayload,
+      const completeData = { ...formData, ...data };
+
+      const formPayload = new FormData();
+
+      for (const key in completeData) {
+        if (key === "photo" && completeData[key]?.[0]) {
+          formPayload.append(key, completeData[key][0]);
+        } else if (key === "availabilityTimes") {
+          formPayload.append(key, JSON.stringify(completeData[key]));
+        } else if (key === "address") {
+          for (const field in completeData.address) {
+            formPayload.append(`address[${field}]`, completeData.address[field]);
+          }
+        } else {
+          formPayload.append(key, completeData[key]);
+        }
+      }
+
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, formPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      if (response.ok) {
-        navigate("/");
+      if (response.status === 201) {
+        dispatch(setUserInfo(response.data.user));
+        navigate("/home");
       } else {
-        console.error("Registration failed");
+        alert("Registration failed");
       }
     } catch (error) {
-      console.error("Error submitting form:", error);
+      console.error("Error during registration:", error);
+      alert("An error occurred during registration. Please try again.");
     }
   };
 
@@ -134,13 +148,37 @@ export default function RegisterWorker() {
               </select>
               {errors.profession && <p className="text-red-500 text-sm mb-2">{errors.profession.message}</p>}
 
-              <label className="block text-left mb-1 text-sm font-medium">Address</label>
+              <label className="block text-left mb-1 text-sm font-medium">Street</label>
               <input
-                {...register("address", { required: "Address is required" })}
+                {...register("address.street", { required: "Street is required" })}
                 className="w-full p-3 mb-1 border rounded-xl"
-                placeholder="Enter your address"
+                placeholder="Enter street address"
               />
-              {errors.address && <p className="text-red-500 text-sm mb-2">{errors.address.message}</p>}
+              {errors.address?.street && <p className="text-red-500 text-sm mb-2">{errors.address.street.message}</p>}
+
+              <label className="block text-left mb-1 text-sm font-medium">City</label>
+              <input
+                {...register("address.city", { required: "City is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter city"
+              />
+              {errors.address?.city && <p className="text-red-500 text-sm mb-2">{errors.address.city.message}</p>}
+
+              <label className="block text-left mb-1 text-sm font-medium">State</label>
+              <input
+                {...register("address.state", { required: "State is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter state"
+              />
+              {errors.address?.state && <p className="text-red-500 text-sm mb-2">{errors.address.state.message}</p>}
+
+              <label className="block text-left mb-1 text-sm font-medium">Pincode</label>
+              <input
+                {...register("address.pincode", { required: "Pincode is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter pincode"
+              />
+              {errors.address?.pincode && <p className="text-red-500 text-sm mb-2">{errors.address.pincode.message}</p>}
 
               <label className="block text-left mb-1 text-sm font-medium">Availability Times</label>
               {fields.map((field, index) => (

@@ -1,14 +1,24 @@
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import axios from "axios";
 import Navbar from "../components/Navbar";
+import { setUserInfo } from "../features/userSlice";
+import { useDispatch } from "react-redux";
 
 export default function RegisterCustomer() {
   const { state } = useLocation();
   const phoneNumber = state?.phoneNumber;
+  const token = state?.token;
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState(null);
+
+  if (!phoneNumber) {
+    navigate("/");
+    return null;
+  }
 
   const {
     register,
@@ -17,16 +27,21 @@ export default function RegisterCustomer() {
   } = useForm();
 
   const onInitialSubmit = (data) => {
-    setFormData({ ...data, phoneNumber });
+    setFormData({ ...data, role : "customer", phoneNumber, token });
     setShowPassword(true);
   };
 
-  const onFinalSubmit = (data) => {
+  const onFinalSubmit = async (data) => {
     const fullData = { ...formData, password: data.password };
-    console.log("Sending to backend:", fullData);
 
-    // TODO: Send data to backend here
-    navigate("/"); // Redirect to home
+    const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, fullData);
+    if(response.status == 201){
+      dispatch(setUserInfo(response.data.user));
+      navigate("/home");
+    }
+    else{
+      alert("Registration failed");
+    }
   };
 
   return (
@@ -75,15 +90,61 @@ export default function RegisterCustomer() {
                 <p className="text-red-500 text-sm mb-3">{errors.email.message}</p>
               )}
 
-              <label className="block text-left mb-1 text-sm font-medium">Address</label>
-              <input
-                {...register("address", { required: "Address is required" })}
-                className="w-full p-3 mb-1 border rounded-xl"
-                placeholder="Enter your address"
-              />
-              {errors.address && (
-                <p className="text-red-500 text-sm mb-4">{errors.address.message}</p>
-              )}
+              <div className="grid grid-cols-1 gap-4 mb-4">
+              <div>
+                <label className="block text-left mb-1 text-sm font-medium">House No. / Street</label>
+                <input
+                  {...register("address.street", { required: "Street address is required" })}
+                  className="w-full p-3 border rounded-xl"
+                  placeholder="Enter street address"
+                />
+                {errors.address?.street && (
+                  <p className="text-red-500 text-sm">{errors.address.street.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-left mb-1 text-sm font-medium">City</label>
+                <input
+                  {...register("address.city", { required: "City is required" })}
+                  className="w-full p-3 border rounded-xl"
+                  placeholder="Enter your city"
+                />
+                {errors.address?.city && (
+                  <p className="text-red-500 text-sm">{errors.address.city.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-left mb-1 text-sm font-medium">State</label>
+                <input
+                  {...register("address.state", { required: "State is required" })}
+                  className="w-full p-3 border rounded-xl"
+                  placeholder="Enter your state"
+                />
+                {errors.address?.state && (
+                  <p className="text-red-500 text-sm">{errors.address.state.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-left mb-1 text-sm font-medium">Pincode</label>
+                <input
+                  {...register("address.pincode", {
+                    required: "Pincode is required",
+                    pattern: {
+                      value: /^[1-9][0-9]{5}$/,
+                      message: "Invalid pincode format",
+                    },
+                  })}
+                  className="w-full p-3 border rounded-xl"
+                  placeholder="Enter your pincode"
+                />
+                {errors.address?.pincode && (
+                  <p className="text-red-500 text-sm">{errors.address.pincode.message}</p>
+                )}
+              </div>
+            </div>
             </>
           )}
 
