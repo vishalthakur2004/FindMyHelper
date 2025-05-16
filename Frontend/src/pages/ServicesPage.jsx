@@ -1,4 +1,5 @@
 import React from "react";
+import Navbar from "@/components/Navbar";
 
 const Services = () => {
   const servicesList = [
@@ -35,29 +36,32 @@ const Services = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-orange-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-        <h1 className="text-4xl font-bold text-center text-orange-500 mb-6">Our Services</h1>
+    <>
+      <Navbar />
+      <div className="min-h-screen bg-orange-50 py-8 px-4">
+        <div className="max-w-6xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+          <h1 className="text-4xl font-bold text-center text-orange-500 mb-6">Our Services</h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-          {servicesList.map((service, index) => (
-            <div key={index} className="bg-white shadow-lg rounded-lg overflow-hidden">
-              <img src={service.imageUrl} alt={service.name} className="w-full h-48 object-cover" />
-              <div className="p-6">
-                <h2 className="text-2xl font-semibold text-orange-600 mb-4">{service.name}</h2>
-                <p className="text-gray-700 mb-4">{service.description}</p>
-                <a
-                  href="/book-now"
-                  className="inline-block bg-orange-500 text-white py-2 px-4 rounded-full hover:bg-orange-600 transition"
-                >
-                  Book Now
-                </a>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+            {servicesList.map((service, index) => (
+              <div key={index} className="bg-white shadow-lg rounded-lg overflow-hidden">
+                <img src={service.imageUrl} alt={service.name} className="w-full h-48 object-cover" />
+                <div className="p-6">
+                  <h2 className="text-2xl font-semibold text-orange-600 mb-4">{service.name}</h2>
+                  <p className="text-gray-700 mb-4">{service.description}</p>
+                  <a
+                    href="/book-now"
+                    className="inline-block bg-orange-500 text-white py-2 px-4 rounded-full hover:bg-orange-600 transition"
+                  >
+                    Book Now
+                  </a>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
