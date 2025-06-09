@@ -94,6 +94,7 @@ export default function LoginPage() {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
+          <p className="text-center mt-2">Don't have an account? <a href="/check-phone-number" className="text-orange-500 hover:underline">Register Now</a></p>
         </form>
       </div>
     </>
