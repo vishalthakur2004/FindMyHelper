@@ -128,6 +128,7 @@ export default function CheckPhoneNumber() {
               </button>
             </>
           )}
+          <p className="pt-4">Already have an account? <Link to="/login" className="text-orange-500 font-semibold underline hover:text-orange-600">Login here</Link>.</p>
         </div>
       </div>
     </>
