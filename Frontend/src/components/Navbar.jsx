@@ -1,8 +1,17 @@
 import { Link, useLocation } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 export default function Navbar() {
   const location = useLocation();
   const currentPath = location.pathname;
+  const role = useSelector((state) => state.user.userInfo?.role);
+
+  const homePath =
+    role === "worker"
+      ? "/worker-home"
+      : role === "customer"
+      ? "/customer-home"
+      : "/";
 
   const linkClass = (path) =>
     currentPath === path
@@ -15,7 +24,7 @@ export default function Navbar() {
         FindMyHelper
       </Link>
       <nav className="space-x-6">
-        <Link to="/home" className={linkClass("/home")}>
+        <Link to={homePath} className={linkClass(homePath)}>
           Home
         </Link>
         <Link to="/about-us" className={linkClass("/about-us")}>

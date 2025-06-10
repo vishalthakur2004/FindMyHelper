@@ -1,6 +1,5 @@
 import { Route, Routes } from "react-router-dom";
 import LandingPage from "./pages/LandingPage.jsx";
-import HomePage from "./pages/HomePage.jsx";
 import CheckPhoneNumber from "./pages/CheckPhoneNumberPage.jsx";
 import RegisterOption from "./pages/RegistrationOptionsPage.jsx";
 import RegisterWorker from "./pages/RegisterWorkerPage.jsx";
@@ -12,6 +11,8 @@ import Contact from "./pages/ContactPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import LogoutPage from "./pages/LogoutPage.jsx";
 import AuthLayout from "./components/authLayout.jsx";
+import CustomerHomePage from "./pages/CustomerHomePage.jsx";
+import WorkerHomePage from "./pages/WorkerHomePage.jsx";
 
 function App() {
   return (
@@ -23,11 +24,26 @@ function App() {
           </AuthLayout>
         } />
         <Route path="/home" element={
+          <AuthLayout authentication={false}>
+            <LandingPage />
+          </AuthLayout>
+        } />
+        <Route path="/customer-home" element={
           <AuthLayout>
-            <HomePage />
+            <CustomerHomePage />
+          </AuthLayout>
+        } />
+        <Route path="/worker-home" element={
+          <AuthLayout>
+            <WorkerHomePage />
           </AuthLayout>
         } />
         <Route path="/check-phone-number" element={
+          <AuthLayout authentication={false}>
+            <CheckPhoneNumber />
+          </AuthLayout>
+        } />
+        <Route path="/register" element={
           <AuthLayout authentication={false}>
             <CheckPhoneNumber />
           </AuthLayout>
