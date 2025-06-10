@@ -67,11 +67,12 @@ export default function RegisterWorker() {
 
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, formPayload, {
         headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
       });
 
       if (response.status === 201) {
-        dispatch(setUserInfo(response.data.user));
-        navigate("/home");
+        dispatch(setUserInfo(response.data));
+        navigate("/worker-home");
       } else {
         alert("Registration failed");
       }

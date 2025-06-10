@@ -1,9 +1,9 @@
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import axios from "axios";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { setUserInfo } from "../features/userSlice";
+import axios from "axios";
 import { useDispatch } from "react-redux";
 
 export default function RegisterCustomer() {
@@ -12,13 +12,9 @@ export default function RegisterCustomer() {
   const token = state?.token;
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState(null);
-
-  if (!phoneNumber) {
-    navigate("/");
-    return null;
-  }
 
   const {
     register,
@@ -26,21 +22,48 @@ export default function RegisterCustomer() {
     formState: { errors },
   } = useForm();
 
+  useEffect(() => {
+    if (!phoneNumber) {
+      navigate("/");
+    }
+  }, []);
+
   const onInitialSubmit = (data) => {
-    setFormData({ ...data, role : "customer", phoneNumber, token });
+    setFormData({ ...data, role: "customer", phoneNumber, token });
     setShowPassword(true);
   };
 
   const onFinalSubmit = async (data) => {
-    const fullData = { ...formData, password: data.password };
+    try {
+      const completeData = { ...formData, ...data };
 
-    const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, fullData);
-    if(response.status == 201){
-      dispatch(setUserInfo(response.data.user));
-      navigate("/home");
-    }
-    else{
-      alert("Registration failed");
+      const formPayload = new FormData();
+      for (const key in completeData) {
+        if (key === "photo" && completeData[key]?.[0]) {
+          formPayload.append(key, completeData[key][0]);
+        } else if (key === "address") {
+          for (const field in completeData.address) {
+            formPayload.append(`address[${field}]`, completeData.address[field]);
+          }
+        } else {
+          formPayload.append(key, completeData[key]);
+        }
+      }
+
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, formPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+
+      if (response.status === 201) {
+        dispatch(setUserInfo(response.data));
+        navigate("/customer-home");
+      } else {
+        alert("Registration failed");
+      }
+    } catch (error) {
+      console.error("Error during registration:", error);
+      alert("An error occurred during registration. Please try again.");
     }
   };
 
@@ -71,80 +94,79 @@ export default function RegisterCustomer() {
                 placeholder="Enter your full name"
               />
               {errors.fullName && (
-                <p className="text-red-500 text-sm mb-3">{errors.fullName.message}</p>
+                <p className="text-red-500 text-sm mb-2">{errors.fullName.message}</p>
               )}
 
               <label className="block text-left mb-1 text-sm font-medium">Email</label>
               <input
                 {...register("email", {
                   required: "Email is required",
-                  pattern: {
-                    value: /^\S+@\S+$/i,
-                    message: "Invalid email format",
-                  },
+                  pattern: { value: /^\S+@\S+$/, message: "Invalid email format" },
                 })}
                 className="w-full p-3 mb-1 border rounded-xl"
                 placeholder="Enter your email"
               />
               {errors.email && (
-                <p className="text-red-500 text-sm mb-3">{errors.email.message}</p>
+                <p className="text-red-500 text-sm mb-2">{errors.email.message}</p>
               )}
 
-              <div className="grid grid-cols-1 gap-4 mb-4">
-              <div>
-                <label className="block text-left mb-1 text-sm font-medium">House No. / Street</label>
-                <input
-                  {...register("address.street", { required: "Street address is required" })}
-                  className="w-full p-3 border rounded-xl"
-                  placeholder="Enter street address"
-                />
-                {errors.address?.street && (
-                  <p className="text-red-500 text-sm">{errors.address.street.message}</p>
-                )}
-              </div>
+              <label className="block text-left mb-1 text-sm font-medium">Street</label>
+              <input
+                {...register("address.street", { required: "Street is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter street address"
+              />
+              {errors.address?.street && (
+                <p className="text-red-500 text-sm mb-2">
+                  {errors.address.street.message}
+                </p>
+              )}
 
-              <div>
-                <label className="block text-left mb-1 text-sm font-medium">City</label>
-                <input
-                  {...register("address.city", { required: "City is required" })}
-                  className="w-full p-3 border rounded-xl"
-                  placeholder="Enter your city"
-                />
-                {errors.address?.city && (
-                  <p className="text-red-500 text-sm">{errors.address.city.message}</p>
-                )}
-              </div>
+              <label className="block text-left mb-1 text-sm font-medium">City</label>
+              <input
+                {...register("address.city", { required: "City is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter city"
+              />
+              {errors.address?.city && (
+                <p className="text-red-500 text-sm mb-2">
+                  {errors.address.city.message}
+                </p>
+              )}
 
-              <div>
-                <label className="block text-left mb-1 text-sm font-medium">State</label>
-                <input
-                  {...register("address.state", { required: "State is required" })}
-                  className="w-full p-3 border rounded-xl"
-                  placeholder="Enter your state"
-                />
-                {errors.address?.state && (
-                  <p className="text-red-500 text-sm">{errors.address.state.message}</p>
-                )}
-              </div>
+              <label className="block text-left mb-1 text-sm font-medium">State</label>
+              <input
+                {...register("address.state", { required: "State is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter state"
+              />
+              {errors.address?.state && (
+                <p className="text-red-500 text-sm mb-2">
+                  {errors.address.state.message}
+                </p>
+              )}
 
-              <div>
-                <label className="block text-left mb-1 text-sm font-medium">Pincode</label>
-                <input
-                  {...register("address.pincode", {
-                    required: "Pincode is required",
-                    pattern: {
-                      value: /^[1-9][0-9]{5}$/,
-                      message: "Invalid pincode format",
-                    },
-                  })}
-                  className="w-full p-3 border rounded-xl"
-                  placeholder="Enter your pincode"
-                />
-                {errors.address?.pincode && (
-                  <p className="text-red-500 text-sm">{errors.address.pincode.message}</p>
-                )}
-              </div>
-            </div>
+              <label className="block text-left mb-1 text-sm font-medium">Pincode</label>
+              <input
+                {...register("address.pincode", { required: "Pincode is required" })}
+                className="w-full p-3 mb-1 border rounded-xl"
+                placeholder="Enter pincode"
+              />
+              {errors.address?.pincode && (
+                <p className="text-red-500 text-sm mb-2">
+                  {errors.address.pincode.message}
+                </p>
+              )}
+
+              <label className="block text-left mb-1 text-sm font-medium">
+                Profile Photo <span className="text-gray-500 text-sm">(optional)</span>
+              </label>
+              <input
+                type="file"
+                {...register("photo")}
+                className="w-full p-2 mb-4 border rounded-xl"
+                accept="image/*"
+              />
             </>
           )}
 
@@ -155,13 +177,13 @@ export default function RegisterCustomer() {
                 type="password"
                 {...register("password", {
                   required: "Password is required",
-                  minLength: { value: 6, message: "Minimum 6 characters" },
+                  minLength: { value: 6, message: "At least 6 characters" },
                 })}
-                className="w-full p-3 mb-1 border rounded-xl"
+                className="w-full p-3 mb-3 border rounded-xl"
                 placeholder="Create a password"
               />
               {errors.password && (
-                <p className="text-red-500 text-sm mb-4">{errors.password.message}</p>
+                <p className="text-red-500 text-sm mb-2">{errors.password.message}</p>
               )}
             </>
           )}
