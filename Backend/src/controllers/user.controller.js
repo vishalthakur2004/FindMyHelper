@@ -59,111 +59,117 @@ export const sendOtpToPhone = async (req, res) => {
 }
 
 export const registerUser = async (req, res) => {
-    try {
-      const { phoneNumber, token } = req.body;
+  try {
+    const { phoneNumber, token } = req.body;
 
-      if (!phoneNumber || !token) {
-        return res.status(400).json({ message: "Phone and Verification token are required" });
-      }
-
-      const decodedPhoneNumber = await verifyPhoneToken(token);
-
-      if(decodedPhoneNumber !== phoneNumber) {
-        return res.status(400).json({ message: "Invalid or expired verification token" });
-      }
-
-      const {
-        fullName,
-        email,
-        password,
-        role,
-        profession,
-        address,
-        availabilityTimes,
-      } = req.body;
-
-      if(!role){
-        return res.status(400).json({ message: 'Role is required' });
-      }
-      if(role === 'worker') {
-        if(!fullName || !email || !password || !role || !profession || !address || !availabilityTimes) {
-          return res.status(400).json({ message: 'All fields are required' });
-        }
-      }
-      else if(!fullName || !email || !password || !role || !address) {
-        return res.status(400).json({ message: 'All fields are required' });
-      }
-
-      const photoPath = req.file ? req.file.path : null;
-      if (!photoPath && role === 'worker') {
-        return res.status(400).json({ message: 'Photo is required' });
-      }
-
-      let photo = null;
-      if(photoPath) {
-        const result = await uploadCloudinary(photoPath);
-        if (!result || !result.url) {
-          return res.status(500).json({ message: 'Failed to upload photo to Cloudinary' });
-        }
-
-        photo = result.url;
-      }
-
-      if(role === 'worker') {
-        if(!photo) {
-          return res.status(400).json({ message: 'Failed to upload profile photo' });
-        }
-      }
-
-      let parsedAvailability = availabilityTimes;
-      if (typeof availabilityTimes === 'string') {
-        try {
-          parsedAvailability = JSON.parse(availabilityTimes);
-        } catch (e) {
-          return res.status(400).json({ message: 'Invalid availability format' });
-        }
-      }
-  
-      const user = await User.create({
-        fullName,
-        email,
-        password,
-        role,
-        phoneNumber,
-        profession,
-        photo,
-        address,
-        availabilityTimes: parsedAvailability,
-      });
-  
-      const accessToken = await user.generateAccessToken();
-      const refreshToken = await user.generateRefreshToken();
-  
-      user.refreshToken = refreshToken;
-      await user.save({ validateBeforeSave: false });
-
-      res.cookie('refreshToken', refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'Strict',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-
-      res.status(201).json({
-        message: 'Registration successful',
-        user: {
-          _id: user._id,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
-          profession: user.profession,
-        },
-        accessToken
-      });
-    } catch (error) {
-      console.error("Registration error:", error);
-      res.status(500).json({ message: 'Something went wrong' });
+    if (!phoneNumber || !token) {
+      return res.status(400).json({ message: "Phone and Verification token are required" });
     }
+
+    const decodedPhoneNumber = await verifyPhoneToken(token);
+
+    if (decodedPhoneNumber !== phoneNumber) {
+      return res.status(400).json({ message: "Invalid or expired verification token" });
+    }
+
+    const {
+      fullName,
+      email,
+      password,
+      role,
+      profession
+    } = req.body;
+
+    const address = {
+      street: req.body["address[street]"],
+      city: req.body["address[city]"],
+      state: req.body["address[state]"],
+      pincode: req.body["address[pincode]"],
+    };
+
+    if (!address.street || !address.city || !address.state || !address.pincode) {
+      return res.status(400).json({ message: "All address fields are required" });
+    }
+
+    if (!role) {
+      return res.status(400).json({ message: 'Role is required' });
+    }
+
+    if (role === 'worker') {
+      if (!fullName || !email || !password || !profession) {
+        return res.status(400).json({ message: 'All fields are required for worker' });
+      }
+    } else {
+      if (!fullName || !email || !password) {
+        return res.status(400).json({ message: 'All fields are required for customer' });
+      }
+    }
+
+    const photoPath = req.file ? req.file.path : null;
+    let photo = null;
+
+    if (photoPath) {
+      const result = await uploadCloudinary(photoPath);
+      if (!result || !result.url) {
+        return res.status(500).json({ message: 'Failed to upload photo to Cloudinary' });
+      }
+      photo = result.url;
+    }
+
+    if (role === 'worker' && !photo) {
+      return res.status(400).json({ message: 'Profile photo is required for worker' });
+    }
+
+    let availabilityTimes = req.body.availabilityTimes;
+    if (role === 'worker' && typeof availabilityTimes === 'string') {
+      try {
+        availabilityTimes = JSON.parse(availabilityTimes);
+      } catch (e) {
+        return res.status(400).json({ message: 'Invalid availability format' });
+      }
+    }
+
+    const user = await User.create({
+      fullName,
+      email,
+      password,
+      role,
+      phoneNumber,
+      profession,
+      photo,
+      address,
+      availabilityTimes,
+    });
+
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
+
+    user.refreshToken = refreshToken;
+    await user.save({ validateBeforeSave: false });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'Strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    res.status(201).json({
+      message: 'Registration successful',
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        profession: user.profession,
+      },
+      accessToken,
+    });
+
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ message: 'Something went wrong' });
+  }
 };
 
 export const loginUser = async (req, res) => {

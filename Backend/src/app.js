@@ -15,7 +15,11 @@ app.use(express.static("public"))
 app.use(cookieParser())
 
 import userRoutes from "./routes/user.routes.js"
+import jobRoutes from "./routes/job.routes.js"
+import bookingRoutes from "./routes/booking.routes.js"
 
 app.use("/api/v1/user", userRoutes)
+app.use("/api/v1/jobs", jobRoutes)
+app.use("/api/v1/bookings", bookingRoutes)
 
 export { app }
