@@ -80,15 +80,13 @@ export const registerUser = async (req, res) => {
       profession
     } = req.body;
 
-    const address = {
-      street: req.body["address[street]"],
-      city: req.body["address[city]"],
-      state: req.body["address[state]"],
-      pincode: req.body["address[pincode]"],
-    };
+    const address = req.body.address;
+    const { street, city, state, pincode } = JSON.parse(JSON.stringify(address));
 
-    if (!address.street || !address.city || !address.state || !address.pincode) {
-      return res.status(400).json({ message: "All address fields are required" });
+    if (!street || !city || !state || !pincode) {
+      return res.status(400).json({
+        message: "All address fields are required",
+      });
     }
 
     if (!role) {
