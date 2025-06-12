@@ -1,9 +1,9 @@
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import axios from "axios";
 import { useDispatch } from "react-redux";
 import { setUserInfo } from "../features/userSlice";
+import { userService } from "../services/userService";
 import Navbar from "../components/Navbar";
 
 export default function LoginPage() {
@@ -20,18 +20,21 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     try {
       setLoading(true);
-      const modifiedData = { ...data, phoneNumber: `+91${data.phoneNumber}` };
+      const phoneNumber = `+91${data.phoneNumber}`;
 
+      const result = await userService.login(phoneNumber, data.password);
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/login`, modifiedData, {
-        withCredentials: true,
-      });
-
-      if (response.status === 200) {
-        dispatch(setUserInfo(response.data));
-        navigate("/home");
+      if (result.success) {
+        dispatch(setUserInfo(result.data));
+        if (result.data.user.role === "customer") {
+          navigate("/customer-home");
+        } else if (result.data.user.role === "worker") {
+          navigate("/worker-home");
+        } else {
+          navigate("/");
+        }
       } else {
-        alert("Invalid credentials");
+        alert(result.message || "Invalid credentials");
       }
     } catch (error) {
       console.error("Login error:", error);

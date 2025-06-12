@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "../components/Navbar";
-import axios from "axios";
+import { userService } from "../services/userService";
 
 export default function CheckPhoneNumber() {
   const [phone, setPhone] = useState("");
@@ -24,46 +24,73 @@ export default function CheckPhoneNumber() {
     setPhoneNumber(phoneNumber);
   
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/user/check-availability`, { phoneNumber });
-      await axios.post(`${import.meta.env.VITE_API_URL}/user/send-otp`, { phoneNumber });
+      // Check availability first
+      const availabilityResult =
+        await userService.checkAvailability(phoneNumber);
 
-      setOtpSent(true);
-      setError("");
-      alert("OTP sent to your phone number");
-  
-    } catch (err) {
-      if (err.response && err.response.status === 409) {
+      if (!availabilityResult.success) {
         setError(
           <>
             Phone number already registered.{" "}
-            <Link href="/login" className="text-orange-500 font-semibold underline hover:text-orange-600">
+            <Link
+              to="/login"
+              className="text-orange-500 font-semibold underline hover:text-orange-600"
+            >
               Login here
             </Link>.
           </>
         );
-      } else {
-        setError("Something went wrong. Please try again.");
+        return;
       }
+
+      // Send OTP
+      const otpResult = await userService.sendOtp(phoneNumber);
+
+      if (otpResult.success) {
+        setOtpSent(true);
+        setError("");
+        alert("OTP sent to your phone number");
+      } else {
+        setError(otpResult.message || "Failed to send OTP. Please try again.");
+      }
+    } catch (err) {
+      console.error("Phone check error:", err);
+      setError("Something went wrong. Please try again.");
     }
   };  
 
   const handleVerifyOtp = async () => {
     setIsVerifying(true);
-    const isVerified = await axios.post(`${import.meta.env.VITE_API_URL}/user/verify-otp`, { phoneNumber, otp });
-    setIsVerifying(false);
-    if (isVerified.status === 200) {
-      const token = isVerified.data?.token;
-      navigate("/register-option", { state: { phoneNumber, token } });
+    try {
+      const result = await userService.verifyOtp(phoneNumber, otp);
+
+      if (result.success) {
+        const token = result.data?.token;
+        navigate("/register-option", { state: { phoneNumber, token } });
+      } else {
+        setError(result.message || "Invalid OTP. Please try again.");
+      }
+    } catch (err) {
+      console.error("OTP verification error:", err);
+      setError("Failed to verify OTP. Please try again.");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   const handleResendOtp = async () => {
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/user/send-otp`, { phoneNumber });
-      alert("OTP sent to your phone number");
+      const result = await userService.sendOtp(phoneNumber);
+
+      if (result.success) {
+        alert("OTP sent to your phone number");
+        setError("");
+      } else {
+        alert(result.message || "Failed to send OTP. Please try again.");
+      }
     } catch (err) {
+      console.error("Resend OTP error:", err);
       alert("Something went wrong. Please try again.");
-      console.log(err);
     }
   };
 

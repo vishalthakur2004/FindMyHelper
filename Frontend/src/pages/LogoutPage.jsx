@@ -4,7 +4,7 @@ import { useDispatch } from 'react-redux';
 import { clearUserInfo } from '../features/userSlice';
 import { persistStore } from "redux-persist";
 import { store } from '../store/store';
-import axios from 'axios';
+import { userService } from '../services/userService';
 
 function LogoutPage() {
   const dispatch = useDispatch();
@@ -13,15 +13,18 @@ function LogoutPage() {
   useEffect(() => {
     const logout = async () => {
       try {
-        await axios.post(`${import.meta.env.VITE_API_URL}/user/logout`, {},
-          {
-            withCredentials: true,
-          }
-        );
+        const result = await userService.logout();
 
-        dispatch(clearUserInfo());
-        persistStore(store).purge();
-        navigate("/login");
+        if (result.success) {
+          dispatch(clearUserInfo());
+          persistStore(store).purge();
+          navigate("/login");
+        } else {
+          console.error("Logout error:", result.message);
+          dispatch(clearUserInfo());
+          persistStore(store).purge();
+          navigate("/login");
+        }
       } catch (error) {
         console.error("Logout error:", error);
         dispatch(clearUserInfo());
@@ -37,3 +40,4 @@ function LogoutPage() {
 }
 
 export default LogoutPage;
+

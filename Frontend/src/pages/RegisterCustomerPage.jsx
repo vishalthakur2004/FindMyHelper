@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { setUserInfo } from "../features/userSlice";
-import axios from "axios";
+import { userService } from "../services/userService";
 import { useDispatch } from "react-redux";
 
 export default function RegisterCustomer() {
@@ -37,29 +37,16 @@ export default function RegisterCustomer() {
     try {
       const completeData = { ...formData, ...data };
 
-      const formPayload = new FormData();
-      for (const key in completeData) {
-        if (key === "photo" && completeData[key]?.[0]) {
-          formPayload.append(key, completeData[key][0]);
-        } else if (key === "address") {
-          for (const field in completeData.address) {
-            formPayload.append(`address[${field}]`, completeData.address[field]);
-          }
-        } else {
-          formPayload.append(key, completeData[key]);
-        }
-      }
+      const photoFile = completeData.photo?.[0] || null;
+      delete completeData.photo; // Remove from data object
 
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
+      const result = await userService.register(completeData, photoFile);
 
-      if (response.status === 201) {
-        dispatch(setUserInfo(response.data));
+      if (result.success) {
+        dispatch(setUserInfo(result.data));
         navigate("/customer-home");
       } else {
-        alert("Registration failed");
+        alert(result.message || "Registration failed");
       }
     } catch (error) {
       console.error("Error during registration:", error);

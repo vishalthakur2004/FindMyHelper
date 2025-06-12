@@ -3,13 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import { setUserInfo } from "../features/userSlice";
-import axios from "axios";
+import { userService } from "../services/userService";
 import { useDispatch } from "react-redux";
 
 export default function RegisterWorker() {
   const { state } = useLocation();
   const phoneNumber = state?.phoneNumber;
-  const token = state?.token; 
+  const token = state?.token;
   const navigate = useNavigate();
 
   const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +41,7 @@ export default function RegisterWorker() {
   }, [showPassword]);
 
   const onInitialSubmit = (data) => {
-    setFormData({ ...data, role : "worker", phoneNumber, token });
+    setFormData({ ...data, role: "worker", phoneNumber, token });
     setShowPassword(true);
   };
 
@@ -49,32 +49,16 @@ export default function RegisterWorker() {
     try {
       const completeData = { ...formData, ...data };
 
-      const formPayload = new FormData();
+      const photoFile = completeData.photo?.[0] || null;
+      delete completeData.photo;
+      
+      const result = await userService.register(completeData, photoFile);
 
-      for (const key in completeData) {
-        if (key === "photo" && completeData[key]?.[0]) {
-          formPayload.append(key, completeData[key][0]);
-        } else if (key === "availabilityTimes") {
-          formPayload.append(key, JSON.stringify(completeData[key]));
-        } else if (key === "address") {
-          for (const field in completeData.address) {
-            formPayload.append(`address[${field}]`, completeData.address[field]);
-          }
-        } else {
-          formPayload.append(key, completeData[key]);
-        }
-      }
-
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/user/register`, formPayload, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
-
-      if (response.status === 201) {
-        dispatch(setUserInfo(response.data));
+      if (result.success) {
+        dispatch(setUserInfo(result.data));
         navigate("/worker-home");
       } else {
-        alert("Registration failed");
+        alert(result.message || "Registration failed");
       }
     } catch (error) {
       console.error("Error during registration:", error);
