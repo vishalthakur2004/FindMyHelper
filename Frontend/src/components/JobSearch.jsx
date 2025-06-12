@@ -1,20 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
+import { fetchNearbyJobs, setFilters } from "../features/jobSlice";
 
 function JobSearch({ onSearch }) {
+  const dispatch = useDispatch();
+  const { filters, loading, error } = useSelector((state) => state.jobs);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [filters, setFilters] = useState({
-    budget: { min: "", max: "" },
-    location: "",
-    urgency: "",
-    sortBy: "newest",
-  });
+  const [localFilters, setLocalFilters] = useState(filters);
+
+  useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
 
   const handleFilterChange = (name, value) => {
     if (name.startsWith("budget.")) {
       const budgetField = name.split(".")[1];
-      setFilters((prev) => ({
+      setLocalFilters((prev) => ({
         ...prev,
         budget: {
           ...prev.budget,
@@ -22,26 +25,36 @@ function JobSearch({ onSearch }) {
         },
       }));
     } else {
-      setFilters((prev) => ({
+       setLocalFilters((prev) => ({
         ...prev,
         [name]: value,
       }));
     }
   };
 
-  const handleSearch = () => {
-    onSearch(filters);
+  const handleSearch = async () => {
+    dispatch(setFilters(localFilters));
+    const result = await dispatch(fetchNearbyJobs(localFilters));
+
+    if (onSearch) {
+      onSearch(localFilters, result);
+    }
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     const resetFilters = {
       budget: { min: "", max: "" },
       location: "",
       urgency: "",
       sortBy: "newest",
     };
-    setFilters(resetFilters);
-    onSearch(resetFilters);
+    setLocalFilters(resetFilters);
+    dispatch(setFilters(resetFilters));
+    const result = await dispatch(fetchNearbyJobs(resetFilters));
+
+    if (onSearch) {
+      onSearch(resetFilters, result);
+    }
   };
 
   const budgetRanges = [
@@ -70,15 +83,16 @@ function JobSearch({ onSearch }) {
         <input
           type="text"
           placeholder="Search by location (city, pincode)..."
-          value={filters.location}
+          value={localFilters.location}
           onChange={(e) => handleFilterChange("location", e.target.value)}
           className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <Button
           onClick={handleSearch}
+          disabled={loading.nearbyJobs}
           className="bg-blue-600 hover:bg-blue-700"
         >
-          Search
+          {loading.nearbyJobs ? "Searching..." : "Search"}
         </Button>
       </div>
 
@@ -98,8 +112,8 @@ function JobSearch({ onSearch }) {
                     handleFilterChange("budget.max", range.max);
                   }}
                   className={`px-3 py-2 text-sm border rounded-md transition-colors ${
-                    filters.budget.min == range.min &&
-                    filters.budget.max == range.max
+                    localFilters.budget.min == range.min &&
+                    localFilters.budget.max == range.max
                       ? "bg-blue-600 text-white border-blue-600"
                       : "border-gray-300 hover:border-blue-500"
                   }`}
@@ -114,7 +128,7 @@ function JobSearch({ onSearch }) {
                 <input
                   type="number"
                   placeholder="Min budget"
-                  value={filters.budget.min}
+                  value={localFilters.budget.min}
                   onChange={(e) =>
                     handleFilterChange("budget.min", e.target.value)
                   }
@@ -126,7 +140,7 @@ function JobSearch({ onSearch }) {
                 <input
                   type="number"
                   placeholder="Max budget"
-                  value={filters.budget.max}
+                  value={localFilters.budget.max}
                   onChange={(e) =>
                     handleFilterChange("budget.max", e.target.value)
                   }
@@ -146,7 +160,7 @@ function JobSearch({ onSearch }) {
               <button
                 onClick={() => handleFilterChange("urgency", "")}
                 className={`px-3 py-2 text-sm border rounded-md transition-colors ${
-                  filters.urgency === ""
+                  localFilters.urgency === ""
                     ? "bg-blue-600 text-white border-blue-600"
                     : "border-gray-300 hover:border-blue-500"
                 }`}
@@ -156,7 +170,7 @@ function JobSearch({ onSearch }) {
               <button
                 onClick={() => handleFilterChange("urgency", "urgent")}
                 className={`px-3 py-2 text-sm border rounded-md transition-colors ${
-                  filters.urgency === "urgent"
+                  localFilters.urgency === "urgent"
                     ? "bg-red-600 text-white border-red-600"
                     : "border-gray-300 hover:border-red-500"
                 }`}
@@ -166,7 +180,7 @@ function JobSearch({ onSearch }) {
               <button
                 onClick={() => handleFilterChange("urgency", "this-week")}
                 className={`px-3 py-2 text-sm border rounded-md transition-colors ${
-                  filters.urgency === "this-week"
+                  localFilters.urgency === "this-week"
                     ? "bg-yellow-600 text-white border-yellow-600"
                     : "border-gray-300 hover:border-yellow-500"
                 }`}
@@ -182,7 +196,7 @@ function JobSearch({ onSearch }) {
               Sort By
             </label>
             <select
-              value={filters.sortBy}
+              value={localFilters.sortBy}
               onChange={(e) => handleFilterChange("sortBy", e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >

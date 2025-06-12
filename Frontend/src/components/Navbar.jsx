@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
+import ApiConnectionStatus from "./ApiConnectionStatus";
 
 export default function Navbar() {
   const location = useLocation();
@@ -39,6 +40,19 @@ export default function Navbar() {
         <Link to="/contact" className={linkClass("/contact")}>
           Contact
         </Link>
+        {role && (
+          <Link
+            to="/test-integration"
+            className={linkClass("/test-integration")}
+          >
+            🔧 Test API
+          </Link>
+        )}
+
+        {/* API Connection Status */}
+        <div className="hidden lg:block">
+          <ApiConnectionStatus />
+        </div>
       </nav>
     </header>
   );

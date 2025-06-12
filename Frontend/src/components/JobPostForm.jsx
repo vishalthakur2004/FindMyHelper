@@ -1,7 +1,12 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Button } from "./ui/button";
+import { createJob } from "../features/jobSlice";
 
 function JobPostForm({ onSubmit, onCancel }) {
+  const dispatch = useDispatch();
+  const { loading, error } = useSelector((state) => state.jobs);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -15,7 +20,7 @@ function JobPostForm({ onSubmit, onCancel }) {
     },
   });
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmitting = loading.creating;
 
   const serviceCategories = [
     "plumber",
@@ -66,14 +71,38 @@ function JobPostForm({ onSubmit, onCancel }) {
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      await onSubmit({
+      const jobData = {
         ...formData,
         budget: parseFloat(formData.budget),
-      });
-    } finally {
-      setIsSubmitting(false);
+      };
+
+      const result = dispatch(createJob(jobData));
+
+      if (createJob.fulfilled.match(result)) {
+        // Reset form on successful submission
+        setFormData({
+          title: "",
+          description: "",
+          serviceCategory: "",
+          budget: "",
+          address: {
+            street: "",
+            city: "",
+            state: "",
+            pincode: "",
+          },
+        });
+
+        if (onSubmit) {
+          onSubmit(result.payload);
+        }
+      } else {
+        alert(result.payload || "Failed to create job post");
+      }
+    } catch (error) {
+      console.error("Error creating job:", error);
+      alert("Failed to create job post");
     }
   };
 

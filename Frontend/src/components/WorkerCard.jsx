@@ -2,38 +2,13 @@ import React, { useState } from "react";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
 
-function WorkerCard({ worker, onRequest }) {
+function WorkerCard({ worker, onBook, showActions = false }) {
   const [isRequesting, setIsRequesting] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
-  const [requestData, setRequestData] = useState({
-    serviceCategory: worker.profession?.toLowerCase() || "",
-    scheduledDate: "",
-    amount: "",
-  });
 
-  const handleRequest = async (e) => {
-    e.preventDefault();
-    if (!requestData.scheduledDate || !requestData.amount) {
-      alert("Please fill in all fields");
-      return;
-    }
-
-    setIsRequesting(true);
-    try {
-      await onRequest(
-        worker._id,
-        requestData.serviceCategory,
-        requestData.scheduledDate,
-        parseFloat(requestData.amount),
-      );
-      setShowRequestForm(false);
-      setRequestData({
-        serviceCategory: worker.profession?.toLowerCase() || "",
-        scheduledDate: "",
-        amount: "",
-      });
-    } finally {
-      setIsRequesting(false);
+  const handleBookWorker = () => {
+    if (onBook) {
+      onBook(worker);
     }
   };
 
@@ -98,17 +73,19 @@ function WorkerCard({ worker, onRequest }) {
           <h3 className="text-lg font-semibold text-gray-900 truncate">
             {worker.fullName}
           </h3>
-          <p className="text-blue-600 font-medium">{worker.profession}</p>
+          <p className="text-blue-600 font-medium">
+            {worker.serviceCategories?.join(", ") || worker.profession}
+          </p>
 
           <div className="flex items-center gap-2 mt-1">
             <div className="flex items-center">
-              {renderStars(worker.avgRating || 0)}
+              {renderStars(worker.rating || worker.avgRating || 0)}
             </div>
             <span className="text-sm text-gray-600">
-              ({worker.avgRating?.toFixed(1) || "0.0"})
+              ({(worker.rating || worker.avgRating)?.toFixed(1) || "0.0"})
             </span>
             <span className="text-sm text-gray-500">
-              • {worker.reviews?.length || 0} reviews
+              • {worker.totalReviews || worker.reviews?.length || 0} reviews
             </span>
           </div>
         </div>
@@ -127,17 +104,26 @@ function WorkerCard({ worker, onRequest }) {
           )}
         </div>
 
-        {worker.availabilityTimes && worker.availabilityTimes.length > 0 && (
+        <div className="flex items-center text-sm text-gray-600">
+          <span className="font-medium mr-2">🕒</span>
+          <span
+            className={worker.isAvailable ? "text-green-600" : "text-red-600"}
+          >
+            {worker.isAvailable ? "Available now" : "Currently unavailable"}
+          </span>
+        </div>
+
+        {worker.experienceYears && (
           <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">🕒</span>
-            <span>Available {worker.availabilityTimes.length} days/week</span>
+            <span className="font-medium mr-2">💼</span>
+            <span>{worker.experienceYears} years experience</span>
           </div>
         )}
 
-        {worker.bookingsAday && (
+         {worker.completedJobs && (
           <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">📊</span>
-            <span>Up to {worker.bookingsAday} bookings/day</span>
+            <span className="font-medium mr-2">✅</span>
+            <span>{worker.completedJobs} jobs completed</span>
           </div>
         )}
       </div>
@@ -157,102 +143,27 @@ function WorkerCard({ worker, onRequest }) {
         </div>
       )}
 
-      <div className="space-y-3">
-        {!showRequestForm ? (
+      {showActions && (
+        <div className="space-y-3">
           <Button
-            onClick={() => setShowRequestForm(true)}
-            className="w-full bg-blue-600 hover:bg-blue-700"
+            onClick={handleBookWorker}
+            disabled={!worker.isAvailable}
+            className={`w-full ${
+              worker.isAvailable
+                ? "bg-blue-600 hover:bg-blue-700"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
           >
-            Request Worker
+            {worker.isAvailable ? "Book Worker" : "Currently Unavailable"}
           </Button>
-        ) : (
-          <form onSubmit={handleRequest} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Service Needed
-              </label>
-              <select
-                value={requestData.serviceCategory}
-                onChange={(e) =>
-                  setRequestData({
-                    ...requestData,
-                    serviceCategory: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              >
-                <option value="">{worker.profession}</option>
-                <option value="plumber">Plumber</option>
-                <option value="electrician">Electrician</option>
-                <option value="carpenter">Carpenter</option>
-                <option value="painter">Painter</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Preferred Date
-              </label>
-              <input
-                type="datetime-local"
-                value={requestData.scheduledDate}
-                onChange={(e) =>
-                  setRequestData({
-                    ...requestData,
-                    scheduledDate: e.target.value,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min={new Date().toISOString().slice(0, 16)}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Budget (₹)
-              </label>
-              <input
-                type="number"
-                value={requestData.amount}
-                onChange={(e) =>
-                  setRequestData({ ...requestData, amount: e.target.value })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your budget"
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="flex space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowRequestForm(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={isRequesting}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {isRequesting ? "Sending..." : "Send Request"}
-              </Button>
-            </div>
-          </form>
-        )}
-
         <Button
-          variant="outline"
-          className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
-        >
-          View Profile
-        </Button>
-      </div>
+            variant="outline"
+            className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+          >
+            View Profile
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

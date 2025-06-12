@@ -1,8 +1,19 @@
 import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
+import { deleteJob } from "../features/jobSlice";
 
-function JobCard({ job, onApply, userType = "worker" }) {
+function JobCard({
+  job,
+  onApply,
+  showActions = false,
+  showOwnerActions = false,
+}) {
+  const dispatch = useDispatch();
+  const { userInfo } = useSelector((state) => state.user);
+  const { loading } = useSelector((state) => state.jobs);
+
   const [isApplying, setIsApplying] = useState(false);
   const [proposedAmount, setProposedAmount] = useState(job.budget || "");
   const [message, setMessage] = useState("");
@@ -16,7 +27,9 @@ function JobCard({ job, onApply, userType = "worker" }) {
 
     setIsApplying(true);
     try {
-      await onApply(job._id, parseFloat(proposedAmount), message);
+      if (onApply) {
+        await onApply(job._id);
+      }
       setMessage("");
       setProposedAmount(job.budget || "");
     } finally {
@@ -24,6 +37,21 @@ function JobCard({ job, onApply, userType = "worker" }) {
     }
   };
 
+  const handleDeleteJob = async () => {
+    if (window.confirm("Are you sure you want to delete this job post?")) {
+      try {
+        const result = await dispatch(deleteJob(job._id));
+        if (deleteJob.fulfilled.match(result)) {
+          alert("Job post deleted successfully");
+        } else {
+          alert(result.payload || "Failed to delete job post");
+        }
+      } catch (error) {
+        console.error("Error deleting job:", error);
+        alert("Failed to delete job post");
+      }
+    }
+  };
   const formatDistance = (distance) => {
     if (distance < 1000) {
       return `${Math.round(distance)}m away`;
@@ -43,7 +71,9 @@ function JobCard({ job, onApply, userType = "worker" }) {
     return `${diffDays}d ago`;
   };
 
-  const hasApplied = job.applications?.some((app) => app.workerId === userType);
+  const hasApplied =
+    job.applications?.some((app) => app.workerId === userInfo?._id) ||
+    job.hasApplied;
 
   return (
     <Card className="p-6 hover:shadow-md transition-shadow">
@@ -77,7 +107,7 @@ function JobCard({ job, onApply, userType = "worker" }) {
         </div>
       </div>
 
-      {userType === "worker" && !hasApplied && (
+      {showActions && !hasApplied && (
         <div className="border-t pt-4">
           <form onSubmit={handleApply}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
@@ -139,7 +169,7 @@ function JobCard({ job, onApply, userType = "worker" }) {
         </div>
       )}
 
-      {userType === "customer" && (
+      {showOwnerActions && (
         <div className="border-t pt-4">
           <div className="flex justify-between items-center">
             <span
@@ -153,7 +183,46 @@ function JobCard({ job, onApply, userType = "worker" }) {
                       : "bg-red-100 text-red-800"
               }`}
             >
-              {job.status.toUpperCase()}
+              {job.status?.toUpperCase() || "OPEN"}
+            </span>
+
+            <div className="flex items-center gap-2">
+              {job.applications && job.applications.length > 0 && (
+                <div className="text-sm text-gray-600">
+                  {job.applications.length} worker
+                  {job.applications.length !== 1 ? "s" : ""} applied
+                </div>
+              )}
+
+              <Button
+                onClick={handleDeleteJob}
+                disabled={loading.deleting}
+                variant="outline"
+                size="sm"
+                className="border-red-500 text-red-600 hover:bg-red-50"
+              >
+                {loading.deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!showActions && !showOwnerActions && (
+        <div className="border-t pt-4">
+          <div className="flex justify-between items-center">
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-medium ${
+                job.status === "open"
+                  ? "bg-green-100 text-green-800"
+                  : job.status === "assigned"
+                    ? "bg-blue-100 text-blue-800"
+                    : job.status === "completed"
+                      ? "bg-gray-100 text-gray-800"
+                      : "bg-red-100 text-red-800"
+              }`}
+            >
+              {job.status?.toUpperCase() || "OPEN"}
             </span>
 
             {job.applications && job.applications.length > 0 && (
