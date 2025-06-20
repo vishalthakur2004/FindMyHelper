@@ -4,11 +4,10 @@ import JobCard from "./JobCard";
 import { Button } from "./ui/button";
 import { fetchNearbyJobs, applyForJob } from "../features/jobSlice";
 
-function JobList({ filters, showMyJobs = false }) {
+function JobList({ showMyJobs = false }) {
   const dispatch = useDispatch();
-  const { nearbyJobs, myJobPosts, loading, error, pagination } = useSelector(
-    (state) => state.jobs,
-  );
+  const { nearbyJobs, myJobPosts, loading, error, pagination, filters } =
+    useSelector((state) => state.jobs);
   const { userInfo } = useSelector((state) => state.user);
 
   const jobs = showMyJobs ? myJobPosts : nearbyJobs;
@@ -21,7 +20,7 @@ function JobList({ filters, showMyJobs = false }) {
     }
   }, [dispatch, filters, showMyJobs]);
 
-  const handleApplyForJob = async (jobId) => {
+  const handleApplyForJob = async (jobId, applicationData) => {
     if (!userInfo) {
       alert("Please login to apply for jobs");
       return;
@@ -33,7 +32,7 @@ function JobList({ filters, showMyJobs = false }) {
     }
 
     try {
-      const result = await dispatch(applyForJob({ jobId }));
+      const result = await dispatch(applyForJob({ jobId, applicationData }));
       if (applyForJob.fulfilled.match(result)) {
         alert("Application submitted successfully!");
       } else {
@@ -46,10 +45,10 @@ function JobList({ filters, showMyJobs = false }) {
   };
 
   const handleLoadMore = () => {
-    if (pagination && pagination.hasNext) {
+    if (pagination && pagination.page < pagination.pages) {
       const nextFilters = {
         ...filters,
-        page: pagination.currentPage + 1,
+        page: pagination.page + 1,
       };
       dispatch(fetchNearbyJobs(nextFilters));
     }
@@ -118,7 +117,7 @@ function JobList({ filters, showMyJobs = false }) {
       ))}
 
       {/* Load More Button for Nearby Jobs */}
-      {!showMyJobs && pagination && pagination.hasNext && (
+      {!showMyJobs && pagination && pagination.page < pagination.pages && (
         <div className="text-center pt-4">
           <Button
             onClick={handleLoadMore}
@@ -135,10 +134,10 @@ function JobList({ filters, showMyJobs = false }) {
       {pagination && jobs.length > 0 && (
         <div className="text-center text-sm text-gray-600 pt-2">
           Showing {jobs.length} of {pagination.total} jobs
-          {pagination.totalPages > 1 && (
+          {pagination.pages > 1 && (
             <span>
               {" "}
-              • Page {pagination.currentPage} of {pagination.totalPages}
+              • Page {pagination.page} of {pagination.pages}
             </span>
           )}
         </div>

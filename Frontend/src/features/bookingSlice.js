@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { bookingService } from "../services/bookingService";
+import { workerService } from "../services/workerService";
 
 // Async thunks for booking operations
 export const createBooking = createAsyncThunk(
@@ -22,7 +23,7 @@ export const fetchNearbyWorkers = createAsyncThunk(
   "bookings/fetchNearbyWorkers",
   async (filters, { rejectWithValue }) => {
     try {
-      const result = await bookingService.getNearbyWorkers(filters);
+      const result = await workerService.getNearbyWorkers(filters);
       if (result.success) {
         return { workers: result.data, pagination: result.pagination };
       } else {

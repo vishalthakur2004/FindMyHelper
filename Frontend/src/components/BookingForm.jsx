@@ -54,9 +54,13 @@ function BookingForm({ worker, onSubmit, onCancel }) {
 
     try {
       const bookingData = {
-        ...formData,
-        amount: parseFloat(formData.amount),
+        workerId: formData.workerId,
+        serviceCategory: formData.serviceCategory,
         scheduledDate: selectedDate.toISOString(),
+        amount: parseFloat(formData.amount),
+        paymentMethod: formData.paymentMethod,
+        description: formData.description,
+        urgent: formData.urgent,
       };
 
       const result = await dispatch(createBooking(bookingData));
@@ -105,10 +109,12 @@ function BookingForm({ worker, onSubmit, onCancel }) {
             required
           >
             <option value="">Select a service</option>
-            {worker.serviceCategories?.map((category) => (
+            {(
+              worker.serviceCategories || [worker.profession?.toLowerCase()]
+            ).map((category) => (
               <option key={category} value={category}>
-                {category.charAt(0).toUpperCase() +
-                  category.slice(1).replace("-", " ")}
+                {category?.charAt(0).toUpperCase() +
+                  category?.slice(1).replace("-", " ")}
               </option>
             ))}
           </select>

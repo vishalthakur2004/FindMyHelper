@@ -25,7 +25,7 @@ function JobSearch({ onSearch }) {
         },
       }));
     } else {
-       setLocalFilters((prev) => ({
+      setLocalFilters((prev) => ({
         ...prev,
         [name]: value,
       }));
@@ -34,10 +34,10 @@ function JobSearch({ onSearch }) {
 
   const handleSearch = async () => {
     dispatch(setFilters(localFilters));
-    const result = await dispatch(fetchNearbyJobs(localFilters));
+    await dispatch(fetchNearbyJobs(localFilters));
 
     if (onSearch) {
-      onSearch(localFilters, result);
+      onSearch(localFilters);
     }
   };
 
@@ -50,10 +50,10 @@ function JobSearch({ onSearch }) {
     };
     setLocalFilters(resetFilters);
     dispatch(setFilters(resetFilters));
-    const result = await dispatch(fetchNearbyJobs(resetFilters));
+    await dispatch(fetchNearbyJobs(resetFilters));
 
     if (onSearch) {
-      onSearch(resetFilters, result);
+      onSearch(resetFilters);
     }
   };
 

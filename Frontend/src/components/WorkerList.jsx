@@ -5,9 +5,9 @@ import BookingForm from "./BookingForm";
 import { Button } from "./ui/button";
 import { fetchNearbyWorkers } from "../features/bookingSlice";
 
-function WorkerList({ filters }) {
+function WorkerList() {
   const dispatch = useDispatch();
-  const { nearbyWorkers, loading, error, pagination } = useSelector(
+  const { nearbyWorkers, loading, error, pagination, filters } = useSelector(
     (state) => state.bookings,
   );
   const { userInfo } = useSelector((state) => state.user);

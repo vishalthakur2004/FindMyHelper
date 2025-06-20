@@ -5,6 +5,7 @@ import { Card } from "./ui/card";
 import JobPostForm from "./JobPostForm";
 import JobList from "./JobList";
 import JobSearch from "./JobSearch";
+import WorkerSearch from "./WorkerSearch";
 import WorkerList from "./WorkerList";
 import BookingList from "./BookingList";
 import { fetchMyJobPosts } from "../features/jobSlice";
@@ -152,26 +153,15 @@ function Dashboard() {
           {(activeTab === "browse" || activeTab === "jobs") && (
             <div className="space-y-6">
               <JobSearch />
-              <JobList
-                showMyJobs={false}
-                filters={{}} // Filters will come from JobSearch component
-              />
+              <JobList showMyJobs={false} />
             </div>
           )}
 
           {/* Find Workers (Customer only) */}
           {activeTab === "workers" && userInfo.role === "customer" && (
             <div className="space-y-6">
-              <Card className="p-4">
-                <h3 className="text-lg font-semibold mb-4">
-                  Find Workers Near You
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Discover skilled workers in your area and book their services
-                  directly.
-                </p>
-              </Card>
-              <WorkerList filters={{}} />
+              <WorkerSearch />
+              <WorkerList />
             </div>
           )}
 

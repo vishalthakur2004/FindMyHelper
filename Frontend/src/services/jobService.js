@@ -3,11 +3,11 @@ import axiosInstance from "../utils/axiosInterceptor";
 const JOB_BASE_URL = `${import.meta.env.VITE_API_BASE_URL}/jobs`;
 
 export const jobService = {
-  // Create a new job post
+  // Create a job post
   createJob: async (jobData) => {
     try {
       const response = await axiosInstance.post(
-        `${JOB_BASE_URL}/create`,
+        `${JOB_BASE_URL}/post`,
         jobData,
       );
       return {
@@ -24,20 +24,21 @@ export const jobService = {
     }
   },
 
-  // Get nearby jobs based on user location
+  // Get nearby jobs for workers
   getNearbyJobs: async (filters = {}) => {
     try {
       const params = new URLSearchParams();
 
       // Add filters to query params
       if (filters.location) params.append("location", filters.location);
-      if (filters.budget?.min) params.append("minBudget", filters.budget.min);
-      if (filters.budget?.max) params.append("maxBudget", filters.budget.max);
+      if (filters.budget?.min) params.append("budget_min", filters.budget.min);
+      if (filters.budget?.max) params.append("budget_max", filters.budget.max);
       if (filters.serviceCategory)
-        params.append("serviceCategory", filters.serviceCategory);
-      if (filters.sortBy) params.append("sortBy", filters.sortBy);
+        params.append("profession", filters.serviceCategory);
       if (filters.urgency) params.append("urgency", filters.urgency);
-      if (filters.radius) params.append("radius", filters.radius);
+      if (filters.sortBy) params.append("sortBy", filters.sortBy);
+      params.append("page", filters.page || 1);
+      params.append("limit", filters.limit || 20);
 
       const response = await axiosInstance.get(
         `${JOB_BASE_URL}/nearby?${params}`,
@@ -57,20 +58,22 @@ export const jobService = {
     }
   },
 
-  // Get user's posted jobs
-  getMyJobPosts: async () => {
+  // Get customer's job posts
+  getMyJobPosts: async (page = 1, limit = 20) => {
     try {
-      const response = await axiosInstance.get(`${JOB_BASE_URL}/my-posts`);
+      const response = await axiosInstance.get(
+        `${JOB_BASE_URL}/my-posts?page=${page}&limit=${limit}`,
+      );
       return {
         success: true,
         data: response.data.jobs || [],
+        pagination: response.data.pagination,
         message: response.data.message,
       };
     } catch (error) {
       return {
         success: false,
-        message:
-          error.response?.data?.message || "Failed to fetch your job posts",
+        message: error.response?.data?.message || "Failed to fetch job posts",
         error: error.response?.data,
       };
     }
@@ -95,7 +98,7 @@ export const jobService = {
   },
 
   // Apply for a job
-  applyForJob: async (jobId, applicationData = {}) => {
+  applyForJob: async (jobId, applicationData) => {
     try {
       const response = await axiosInstance.post(
         `${JOB_BASE_URL}/${jobId}/apply`,
@@ -103,7 +106,7 @@ export const jobService = {
       );
       return {
         success: true,
-        data: response.data.application,
+        data: response.data.job,
         message: response.data.message,
       };
     } catch (error) {
@@ -116,20 +119,15 @@ export const jobService = {
   },
 
   // Update application status (for job posters)
-  updateApplicationStatus: async (
-    jobId,
-    applicationId,
-    status,
-    feedback = "",
-  ) => {
+  updateApplicationStatus: async (jobId, applicationId, status) => {
     try {
       const response = await axiosInstance.patch(
         `${JOB_BASE_URL}/${jobId}/applications/${applicationId}`,
-        { status, feedback },
+        { status },
       );
       return {
         success: true,
-        data: response.data.application,
+        data: response.data.job,
         message: response.data.message,
       };
     } catch (error) {
@@ -161,42 +159,22 @@ export const jobService = {
   },
 
   // Get job applications for a specific job (for job posters)
-  getJobApplications: async (jobId) => {
+  getMyApplications: async (page = 1, limit = 20) => {
     try {
       const response = await axiosInstance.get(
-        `${JOB_BASE_URL}/${jobId}/applications`,
+        `${JOB_BASE_URL}/my-applications?page=${page}&limit=${limit}`,
       );
       return {
         success: true,
         data: response.data.applications || [],
+        pagination: response.data.pagination,
         message: response.data.message,
       };
     } catch (error) {
       return {
         success: false,
         message:
-          error.response?.data?.message || "Failed to fetch job applications",
-        error: error.response?.data,
-      };
-    }
-  },
-
-  // Get user's job applications (for workers)
-  getMyApplications: async () => {
-    try {
-      const response = await axiosInstance.get(
-        `${JOB_BASE_URL}/my-applications`,
-      );
-      return {
-        success: true,
-        data: response.data.applications || [],
-        message: response.data.message,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          error.response?.data?.message || "Failed to fetch your applications",
+          error.response?.data?.message || "Failed to fetch applications",
         error: error.response?.data,
       };
     }

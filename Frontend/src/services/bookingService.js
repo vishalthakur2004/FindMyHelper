@@ -33,13 +33,13 @@ export const bookingService = {
       // Add filters to query params
       if (filters.location) params.append("location", filters.location);
       if (filters.serviceCategory)
-        params.append("serviceCategory", filters.serviceCategory);
+        params.append("profession", filters.serviceCategory);
       if (filters.radius) params.append("radius", filters.radius);
       if (filters.rating) params.append("minRating", filters.rating);
       if (filters.sortBy) params.append("sortBy", filters.sortBy);
 
       const response = await axiosInstance.get(
-        `${BOOKING_BASE_URL}/workers-nearby?${params}`,
+        `${BOOKING_BASE_URL}/nearby-workers?${params}`,
       );
       return {
         success: true,
@@ -62,12 +62,13 @@ export const bookingService = {
     try {
       const params = status ? `?status=${status}` : "";
       const response = await axiosInstance.get(
-        `${BOOKING_BASE_URL}/worker-current${params}`,
+        `${BOOKING_BASE_URL}/worker${params}`,
       );
       return {
         success: true,
         data: response.data.bookings || [],
         stats: response.data.stats,
+        pagination: response.data.pagination,
         message: response.data.message,
       };
     } catch (error) {
@@ -85,12 +86,13 @@ export const bookingService = {
     try {
       const params = status ? `?status=${status}` : "";
       const response = await axiosInstance.get(
-        `${BOOKING_BASE_URL}/customer-current${params}`,
+        `${BOOKING_BASE_URL}/customer${params}`,
       );
       return {
         success: true,
         data: response.data.bookings || [],
         stats: response.data.stats,
+        pagination: response.data.pagination,
         message: response.data.message,
       };
     } catch (error) {
