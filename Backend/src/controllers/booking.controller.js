@@ -57,7 +57,9 @@ export const createBookingRequest = async (req, res) => {
       amount: parseFloat(amount),
       paymentMethod,
       location: customer.location,
-      status: "requested",
+      status: "pending",
+      description: req.body.description,
+      urgent: req.body.urgent,
     });
 
     // Populate the booking with user details
@@ -98,7 +100,7 @@ export const getWorkerBookings = async (req, res) => {
       query.status = status;
     } else {
       // Default to active bookings (exclude completed and cancelled)
-      query.status = { $in: ["requested", "accepted", "in_progress"] };
+      query.status = { $in: ["pending", "accepted", "in-progress"] };
     }
 
     const bookings = await Booking.find(query)
@@ -236,12 +238,13 @@ export const updateBookingStatus = async (req, res) => {
     // Validate status transitions
     const currentStatus = booking.status;
     const validTransitions = {
-      requested: ["accepted", "rejected", "cancelled"],
-      accepted: ["in_progress", "cancelled"],
-      in_progress: ["completed", "cancelled"],
-      completed: [],
+      pending: ["accepted", "rejected", "cancelled"],
+      accepted: ["in-progress", "cancelled"],
+      "in-progress": ["completed", "cancelled"],
+      completed: ["confirmed"],
       cancelled: [],
       rejected: [],
+      confirmed: [],
     };
 
     if (!validTransitions[currentStatus].includes(status)) {

@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const jobPostSchema = new mongoose.Schema({
   customerId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: "User",
     required: true,
   },
   title: {
@@ -17,12 +17,23 @@ const jobPostSchema = new mongoose.Schema({
   serviceCategory: {
     type: String,
     required: true,
-    enum: ['plumber', 'electrician', 'carpenter', 'painter'],
+    enum: [
+      "plumber",
+      "electrician",
+      "carpenter",
+      "painter",
+      "mason",
+      "ac-technician",
+      "appliance-repair",
+      "pest-control",
+      "gardener",
+      "cleaner",
+    ],
   },
   location: {
     type: {
       type: String,
-      default: 'Point',
+      default: "Point",
     },
     coordinates: {
       type: [Number], // [longitude, latitude]
@@ -37,28 +48,34 @@ const jobPostSchema = new mongoose.Schema({
   budget: Number,
   status: {
     type: String,
-    enum: ['open', 'assigned', 'completed', 'cancelled'],
-    default: 'open',
+    enum: ["open", "assigned", "completed", "cancelled"],
+    default: "open",
   },
   assignedWorker: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    ref: "User",
   },
   applications: [
     {
-      workerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      workerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       message: String,
       proposedAmount: Number,
       status: {
         type: String,
-        enum: ['pending', 'accepted', 'rejected'],
-        default: 'pending',
+        enum: ["pending", "accepted", "rejected"],
+        default: "pending",
+      },
+      appliedAt: {
+        type: Date,
+        default: Date.now,
       },
     },
   ],
-}, {
-  timestamps: true,
-});
+  },
+  {
+    timestamps: true,
+  },
+);
 
 jobPostSchema.index({ location: '2dsphere' });
 

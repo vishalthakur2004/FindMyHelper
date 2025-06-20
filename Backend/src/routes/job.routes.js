@@ -16,7 +16,7 @@ const router = express.Router();
 router.use(authenticateUser);
 
 // Job post management
-router.post("/create", createJobPost);
+router.post("/post", createJobPost);
 router.get("/my-posts", getMyJobPosts);
 router.get("/nearby", getNearbyJobs);
 router.get("/:jobId", getJobById);

@@ -65,6 +65,42 @@ const userSchema = new mongoose.Schema(
         'Home Tutor', 'Language Trainer', 'Music Teacher', 'Dance Instructor', 'Yoga Instructor'
       ],
     },
+    // serviceCategories: {
+    //   type: [String],
+    //   required: function () {
+    //     return this.role === "worker";
+    //   },
+    //   enum: [
+    //     "plumber",
+    //     "electrician",
+    //     "carpenter",
+    //     "painter",
+    //     "mason",
+    //     "ac-technician",
+    //     "appliance-repair",
+    //     "pest-control",
+    //     "gardener",
+    //     "cleaner",
+    //   ],
+    //   default: function () {
+    //     if (this.profession) {
+    //       const professionMap = {
+    //         Plumber: "plumber",
+    //         Electrician: "electrician",
+    //         Carpenter: "carpenter",
+    //         Painter: "painter",
+    //         Mason: "mason",
+    //         "AC Technician": "ac-technician",
+    //         "Appliance Repair Technician": "appliance-repair",
+    //         "Pest Control Specialist": "pest-control",
+    //         Gardener: "gardener",
+    //         "Home Cleaner": "cleaner",
+    //       };
+    //       return [professionMap[this.profession] || "cleaner"];
+    //     }
+    //     return [];
+    //   },
+    // },
     photo: {
       type: String,
       required: function () {
@@ -100,6 +136,29 @@ const userSchema = new mongoose.Schema(
     },
     bookingsAday: {
       type: Number,
+      default: 5,
+    },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    avgRating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5,
+    },
+    totalReviews: {
+      type: Number,
+      default: 0,
+    },
+    completedJobs: {
+      type: Number,
+      default: 0,
+    },
+    experienceYears: {
+      type: Number,
+      default: 1,
     },    
     reviews: [
       {

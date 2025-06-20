@@ -1,6 +1,21 @@
 import { JobPost } from "../models/jobPost.model.js";
 import { User } from "../models/user.model.js";
 
+const getSortCriteria = (sortBy) => {
+  switch (sortBy) {
+    case "oldest":
+      return { createdAt: 1 };
+    case "budget-high":
+      return { budget: -1, createdAt: -1 };
+    case "budget-low":
+      return { budget: 1, createdAt: -1 };
+    case "distance":
+      return { distance: 1, createdAt: -1 };
+    default: // 'newest'
+      return { createdAt: -1 };
+  }
+};
+
 export const createJobPost = async (req, res) => {
   try {
     const { title, description, serviceCategory, budget, address } = req.body;
@@ -56,7 +71,17 @@ export const createJobPost = async (req, res) => {
 export const getNearbyJobs = async (req, res) => {
   try {
     const workerId = req.user._id;
-    const { profession, radius = 10000, page = 1, limit = 20 } = req.query;
+    const {
+      profession,
+      radius = 10000,
+      page = 1,
+      limit = 20,
+      budget_min,
+      budget_max,
+      location,
+      urgency,
+      sortBy = "newest",
+    } = req.query;
 
     // Get worker location
     const worker = await User.findById(workerId);
@@ -89,9 +114,43 @@ export const getNearbyJobs = async (req, res) => {
         professionMap[worker.profession] || worker.profession.toLowerCase();
     }
 
+    // Add budget filters
+    if (budget_min || budget_max) {
+      query.budget = {};
+      if (budget_min) query.budget.$gte = parseFloat(budget_min);
+      if (budget_max) query.budget.$lte = parseFloat(budget_max);
+    }
+
+    // Add urgency filter
+    if (urgency === "urgent") {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      query.createdAt = { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) };
+    } else if (urgency === "this-week") {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      query.createdAt = { $gte: weekAgo };
+    }
+
+    // Add location text filter
+    if (location) {
+      query.$or = [
+        { "address.city": new RegExp(location, "i") },
+        { "address.state": new RegExp(location, "i") },
+        { "address.pincode": new RegExp(location, "i") },
+      ];
+    }
+
     // Build aggregation pipeline
-    const pipeline = [
-      {
+    const pipeline = [];
+
+    // Add location filter if worker has location
+    if (
+      worker.location &&
+      worker.location.coordinates &&
+      worker.location.coordinates[0] !== 0
+    ) {
+      pipeline.push({
         $geoNear: {
           near: worker.location,
           distanceField: "distance",
@@ -99,7 +158,16 @@ export const getNearbyJobs = async (req, res) => {
           spherical: true,
           query: query,
         },
-      },
+      });
+    } else {
+      // If no location, just match the query
+      pipeline.push({ $match: query });
+      // Add a default distance field
+      pipeline.push({ $addFields: { distance: 0 } });
+    }
+
+    // Add remaining pipeline stages
+    pipeline.push(
       {
         $lookup: {
           from: "users",
@@ -130,7 +198,7 @@ export const getNearbyJobs = async (req, res) => {
         },
       },
       {
-        $sort: { createdAt: -1 },
+        $sort: getSortCriteria(sortBy),
       },
       {
         $skip: (parseInt(page) - 1) * parseInt(limit),
@@ -138,7 +206,7 @@ export const getNearbyJobs = async (req, res) => {
       {
         $limit: parseInt(limit),
       },
-    ];
+    );
 
     const jobs = await JobPost.aggregate(pipeline);
 

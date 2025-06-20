@@ -16,12 +16,12 @@ router.use(authenticateUser);
 
 // Booking management
 router.post("/request", createBookingRequest);
-router.get("/worker-current", getWorkerBookings);
-router.get("/customer-current", getCustomerBookings);
+router.get("/worker", getWorkerBookings);
+router.get("/customer", getCustomerBookings);
 router.get("/:bookingId", getBookingById);
 router.patch("/:bookingId/status", updateBookingStatus);
 
 // Worker discovery
-router.get("/workers-nearby", getNearbyWorkers);
+router.get("/nearby-workers", getNearbyWorkers);
 
 export default router;
