@@ -4,6 +4,10 @@ import Navbar from "../components/Navbar";
 import Dashboard from "../components/Dashboard";
 import { Card } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import JobCard from "../components/JobCard";
+import BookingCard from "../components/BookingCard";
+import SearchWorkers from "../components/SearchWorkers";
+import JobPostForm from "../components/JobPostForm";
 import { fetchCustomerBookings } from "../features/bookingSlice";
 import { fetchMyJobPosts } from "../features/jobSlice";
 
@@ -18,6 +22,7 @@ function CustomerHomePage() {
   const dispatch = useDispatch();
 
   const [activeSection, setActiveSection] = useState("dashboard");
+  const [showJobPostForm, setShowJobPostForm] = useState(false);
 
   useEffect(() => {
     // Initialize customer data when component mounts
@@ -152,60 +157,90 @@ function CustomerHomePage() {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="navigation-tabs bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <nav className="tab-nav flex space-x-8">
+            {[
+              { id: "dashboard", label: "Dashboard", icon: "🏠" },
+              { id: "find-workers", label: "Find Workers", icon: "👷" },
+              { id: "my-jobs", label: "My Job Posts", icon: "📝" },
+              { id: "bookings", label: "My Bookings", icon: "📅" },
+              { id: "reviews", label: "Reviews", icon: "⭐" }
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSection(tab.id)}
+                className={`tab-button flex items-center gap-2 py-4 border-b-2 text-sm font-medium transition-colors ${
+                  activeSection === tab.id
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                }`}
+              >
+                <span className="tab-icon">{tab.icon}</span>
+                <span className="tab-label">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
       {/* Quick Actions */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <Card
-            className="p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => setActiveSection("workers")}
-          >
-            <div className="flex items-center">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <span className="text-2xl">👷</span>
+        {activeSection === "dashboard" && (
+          <div className="quick-actions grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card
+              className="action-card p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setActiveSection("find-workers")}
+            >
+              <div className="action-content flex items-center">
+                <div className="action-icon p-3 bg-blue-100 rounded-lg">
+                  <span className="text-2xl">👷</span>
+                </div>
+                <div className="action-info ml-4">
+                  <h3 className="action-title font-semibold text-gray-900">Find Workers</h3>
+                  <p className="action-description text-sm text-gray-600">
+                    Book skilled workers near you
+                  </p>
+                </div>
               </div>
-              <div className="ml-4">
-                <h3 className="font-semibold text-gray-900">Find Workers</h3>
-                <p className="text-sm text-gray-600">
-                  Book skilled workers near you
-                </p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card
-            className="p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => setActiveSection("post-job")}
-          >
-            <div className="flex items-center">
-              <div className="p-3 bg-green-100 rounded-lg">
-                <span className="text-2xl">📝</span>
+            <Card
+              className="action-card p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setShowJobPostForm(true)}
+            >
+              <div className="action-content flex items-center">
+                <div className="action-icon p-3 bg-green-100 rounded-lg">
+                  <span className="text-2xl">📝</span>
+                </div>
+                <div className="action-info ml-4">
+                  <h3 className="action-title font-semibold text-gray-900">Post a Job</h3>
+                  <p className="action-description text-sm text-gray-600">
+                    Get multiple quotes from workers
+                  </p>
+                </div>
               </div>
-              <div className="ml-4">
-                <h3 className="font-semibold text-gray-900">Post a Job</h3>
-                <p className="text-sm text-gray-600">
-                  Get multiple quotes from workers
-                </p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card
-            className="p-6 hover:shadow-md transition-shadow cursor-pointer"
-            onClick={() => setActiveSection("browse")}
-          >
-            <div className="flex items-center">
-              <div className="p-3 bg-purple-100 rounded-lg">
-                <span className="text-2xl">🔍</span>
+            <Card
+              className="action-card p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => setActiveSection("bookings")}
+            >
+              <div className="action-content flex items-center">
+                <div className="action-icon p-3 bg-purple-100 rounded-lg">
+                  <span className="text-2xl">📅</span>
+                </div>
+                <div className="action-info ml-4">
+                  <h3 className="action-title font-semibold text-gray-900">Manage Bookings</h3>
+                  <p className="action-description text-sm text-gray-600">
+                    View and manage your bookings
+                  </p>
+                </div>
               </div>
-              <div className="ml-4">
-                <h3 className="font-semibold text-gray-900">Browse Jobs</h3>
-                <p className="text-sm text-gray-600">
-                  See all available opportunities
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
+        )}
 
         {/* Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -343,8 +378,125 @@ function CustomerHomePage() {
         </div>
       </div>
 
-      {/* Main Dashboard */}
-      <Dashboard />
+        {/* Main Content Sections */}
+        {activeSection === "find-workers" && <SearchWorkers />}
+
+        {activeSection === "my-jobs" && (
+          <div className="my-jobs-section">
+            <div className="section-header flex justify-between items-center mb-6">
+              <div>
+                <h2 className="section-title text-2xl font-bold text-gray-900">My Job Posts</h2>
+                <p className="section-description text-gray-600">Manage your posted jobs and applications</p>
+              </div>
+              <Button
+                onClick={() => setShowJobPostForm(true)}
+                className="post-job-button bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Post New Job
+              </Button>
+            </div>
+
+            {jobLoading.myJobPosts ? (
+              <div className="loading-state text-center py-12">
+                <div className="loading-spinner animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="loading-text text-gray-600">Loading your job posts...</p>
+              </div>
+            ) : myJobPosts && myJobPosts.length > 0 ? (
+              <div className="jobs-grid space-y-6">
+                {myJobPosts.map((job) => (
+                  <JobCard
+                    key={job._id}
+                    job={job}
+                    userRole="customer"
+                    onEdit={(job) => console.log("Edit job:", job)}
+                    onViewApplications={(job) => console.log("View applications:", job)}
+                    showApplicationButton={false}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="empty-state p-12 text-center">
+                <div className="empty-icon text-6xl mb-4">📝</div>
+                <h3 className="empty-title text-xl font-semibold text-gray-900 mb-2">No Job Posts Yet</h3>
+                <p className="empty-message text-gray-600 mb-4">
+                  Start by posting your first job to get quotes from skilled workers.
+                </p>
+                <Button onClick={() => setShowJobPostForm(true)}>Post Your First Job</Button>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {activeSection === "bookings" && (
+          <div className="bookings-section">
+            <div className="section-header mb-6">
+              <h2 className="section-title text-2xl font-bold text-gray-900">My Bookings</h2>
+              <p className="section-description text-gray-600">Track and manage your service bookings</p>
+            </div>
+
+            {bookingLoading.customerBookings ? (
+              <div className="loading-state text-center py-12">
+                <div className="loading-spinner animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="loading-text text-gray-600">Loading your bookings...</p>
+              </div>
+            ) : customerBookings && customerBookings.length > 0 ? (
+              <div className="bookings-grid space-y-6">
+                {customerBookings.map((booking) => (
+                  <BookingCard
+                    key={booking._id}
+                    booking={booking}
+                    userRole="customer"
+                    onViewDetails={(booking) => console.log("View booking details:", booking)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <Card className="empty-state p-12 text-center">
+                <div className="empty-icon text-6xl mb-4">📅</div>
+                <h3 className="empty-title text-xl font-semibold text-gray-900 mb-2">No Bookings Yet</h3>
+                <p className="empty-message text-gray-600 mb-4">
+                  You haven't made any bookings yet. Find workers or post jobs to get started.
+                </p>
+                <Button onClick={() => setActiveSection("find-workers")}>Find Workers</Button>
+              </Card>
+            )}
+          </div>
+        )}
+
+        {activeSection === "reviews" && (
+          <div className="reviews-section">
+            <div className="section-header mb-6">
+              <h2 className="section-title text-2xl font-bold text-gray-900">My Reviews</h2>
+              <p className="section-description text-gray-600">Reviews you've given to workers</p>
+            </div>
+
+            <Card className="empty-state p-12 text-center">
+              <div className="empty-icon text-6xl mb-4">⭐</div>
+              <h3 className="empty-title text-xl font-semibold text-gray-900 mb-2">No Reviews Yet</h3>
+              <p className="empty-message text-gray-600 mb-4">
+                Complete some bookings to start leaving reviews for workers.
+              </p>
+              <Button onClick={() => setActiveSection("bookings")}>View Bookings</Button>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Job Post Form Modal */}
+      {showJobPostForm && (
+        <div className="modal-overlay fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="modal-content w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <JobPostForm
+              onSuccess={(job) => {
+                setShowJobPostForm(false);
+                dispatch(fetchMyJobPosts());
+                alert("Job posted successfully!");
+              }}
+              onCancel={() => setShowJobPostForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
