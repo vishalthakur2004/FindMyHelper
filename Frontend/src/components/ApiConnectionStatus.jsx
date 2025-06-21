@@ -18,9 +18,15 @@ function ApiConnectionStatus() {
       });
 
       // Try to hit a simple endpoint to check connection
-      const response = await axiosInstance.get("/users/check-availability", {
-        timeout: 5000,
-      });
+      const response = await axiosInstance.post(
+        "/users/check-availability",
+        {
+          phoneNumber: "0000000000", // Test phone number for connection check
+        },
+        {
+          timeout: 5000,
+        },
+      );
 
       setConnectionStatus({
         status: "connected",
