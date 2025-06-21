@@ -1,97 +1,90 @@
 import React, { useState } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
+import { applyForJob, deleteJob } from "../features/jobSlice";
 
 function JobCard({
   job,
-  onApply,
-  showActions = false,
-  showOwnerActions = false,
+  userRole,
+  onEdit,
+  onViewApplications,
+  showApplicationButton = true,
 }) {
+  const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.user);
+  const { loading } = useSelector((state) => state.jobs);
+  const [isApplying, setIsApplying] = useState(false);
   const [showApplicationForm, setShowApplicationForm] = useState(false);
   const [applicationData, setApplicationData] = useState({
-    proposedAmount: job.budget || "",
-    message: "",
+    coverLetter: "",
+    proposedBudget: "",
+    estimatedDuration: "",
   });
 
-  const [isApplying, setIsApplying] = useState(false);
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
-      weekday: "short",
+    return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
     });
   };
 
-  const formatDistance = (distance) => {
-    if (distance < 1000) {
-      return `${Math.round(distance)}m away`;
-    }
-    return `${(distance / 1000).toFixed(1)}km away`;
-  };
-
   const getStatusColor = (status) => {
-    const colors = {
-      open: "bg-green-100 text-green-800",
-      assigned: "bg-blue-100 text-blue-800",
-      completed: "bg-gray-100 text-gray-800",
-      cancelled: "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    switch (status) {
+      case "open":
+        return "bg-green-100 text-green-800";
+      case "assigned":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-gray-100 text-gray-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
   };
 
-  const getUrgencyBadge = () => {
-    const createdAt = new Date(job.createdAt);
-    const now = new Date();
-    const hoursDiff = (now - createdAt) / (1000 * 60 * 60);
-
-    if (hoursDiff < 24) {
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-          🚨 Urgent
-        </span>
-      );
-    } else if (hoursDiff < 168) {
-      // 7 days
-      return (
-        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-          ⏰ This Week
-        </span>
-      );
+  const getUrgencyColor = (urgency) => {
+    switch (urgency) {
+      case "urgent":
+        return "bg-red-100 text-red-800";
+      case "medium":
+        return "bg-yellow-100 text-yellow-800";
+      case "low":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
-    return null;
   };
 
-  const handleApplyClick = () => {
-    if (!userInfo || userInfo.role !== "worker") {
-      alert("Please login as a worker to apply for jobs");
-      return;
-    }
-    setShowApplicationForm(true);
-  };
-
-  const handleSubmitApplication = async () => {
-    if (!applicationData.message.trim()) {
-      alert("Please provide a message with your application");
-      return;
-    }
-
-    if (
-      !applicationData.proposedAmount ||
-      parseFloat(applicationData.proposedAmount) <= 0
-    ) {
-      alert("Please provide a valid proposed amount");
+  const handleApplyForJob = async () => {
+    if (!applicationData.coverLetter.trim()) {
+      alert("Please provide a cover letter");
       return;
     }
 
     setIsApplying(true);
     try {
-      await onApply(job._id, applicationData);
-      setShowApplicationForm(false);
-      setApplicationData({ proposedAmount: job.budget || "", message: "" });
+      const result = await dispatch(
+        applyForJob({
+          jobId: job._id,
+          applicationData: {
+            coverLetter: applicationData.coverLetter,
+            proposedBudget: applicationData.proposedBudget || job.budget,
+            estimatedDuration: applicationData.estimatedDuration,
+          },
+        }),
+      );
+
+      if (result.type === "jobs/applyForJob/fulfilled") {
+        setShowApplicationForm(false);
+        setApplicationData({
+          coverLetter: "",
+          proposedBudget: "",
+          estimatedDuration: "",
+        });
+      }
     } catch (error) {
       console.error("Error applying for job:", error);
     } finally {
@@ -99,224 +92,239 @@ function JobCard({
     }
   };
 
-  const hasApplied = job.applications?.some(
-    (app) =>
-      app.workerId?._id === userInfo?._id || app.workerId === userInfo?._id,
-  );
+  const handleDeleteJob = async () => {
+    if (window.confirm("Are you sure you want to delete this job post?")) {
+      await dispatch(deleteJob(job._id));
+    }
+  };
+
+  const canApply =
+    userRole === "worker" &&
+    job.status === "open" &&
+    job.customerId !== userInfo?._id &&
+    !job.hasApplied;
+
+  const isOwner = userRole === "customer" && job.customerId === userInfo?._id;
 
   return (
-    <Card className="p-6 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-            {getUrgencyBadge()}
-          </div>
-          <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-            <span className="font-medium text-blue-600">
-              {job.serviceCategory?.charAt(0).toUpperCase() +
-                job.serviceCategory?.slice(1).replace("-", " ")}
+    <Card className="job-card border border-gray-200 hover:shadow-lg transition-shadow duration-200">
+      <div className="card-header p-4 border-b border-gray-100">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="job-title text-lg font-semibold text-gray-900 line-clamp-2">
+            {job.title}
+          </h3>
+          <div className="status-badges flex gap-2">
+            <span
+              className={`status-badge px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}
+            >
+              {job.status}
             </span>
-            <span>•</span>
-            <span className="font-semibold text-green-600">₹{job.budget}</span>
-            {job.distance && (
-              <>
-                <span>•</span>
-                <span>{formatDistance(job.distance)}</span>
-              </>
+            {job.urgency && (
+              <span
+                className={`urgency-badge px-2 py-1 rounded-full text-xs font-medium ${getUrgencyColor(job.urgency)}`}
+              >
+                {job.urgency}
+              </span>
             )}
           </div>
-          <p className="text-sm text-gray-600">
-            Posted by:{" "}
-            {job.customer?.fullName || job.customerId?.fullName || "Customer"}
-          </p>
         </div>
-        <span
-          className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(job.status)}`}
-        >
-          {job.status?.charAt(0).toUpperCase() + job.status?.slice(1)}
-        </span>
+
+        <div className="job-meta flex items-center gap-4 text-sm text-gray-600">
+          <span className="service-category font-medium">
+            {job.serviceCategory
+              ?.replace("-", " ")
+              .replace(/\b\w/g, (l) => l.toUpperCase())}
+          </span>
+          <span className="budget text-green-600 font-semibold">
+            ₹{job.budget}
+          </span>
+          <span className="post-date">{formatDate(job.createdAt)}</span>
+        </div>
       </div>
 
-        {job.description && (
-        <div className="mb-4">
-          <p className="text-sm text-gray-700">{job.description}</p>
-        </div>
-      )}
+      <div className="card-body p-4">
+        <p className="job-description text-gray-700 mb-4 line-clamp-3">
+          {job.description}
+        </p>
 
-      <div className="space-y-2 mb-4">
-        <div className="flex items-center text-sm text-gray-600">
-          <span className="font-medium mr-2">📍</span>
-          <span>
-            {job.address?.street && `${job.address.street}, `}
-            {job.address?.city}, {job.address?.state}
-            {job.address?.pincode && ` - ${job.address.pincode}`}
-          </span>
+        <div className="job-details grid grid-cols-2 gap-4 mb-4 text-sm">
+          {job.location && (
+            <div className="location">
+              <span className="label text-gray-500">Location:</span>
+              <span className="value ml-1 text-gray-700">
+                {job.location.address}
+              </span>
+            </div>
+          )}
+          {job.requirements?.length > 0 && (
+            <div className="requirements">
+              <span className="label text-gray-500">Skills:</span>
+              <span className="value ml-1 text-gray-700">
+                {job.requirements.slice(0, 2).join(", ")}
+                {job.requirements.length > 2 && "..."}
+              </span>
+            </div>
+          )}
         </div>
-        <div className="flex items-center text-sm text-gray-600">
-          <span className="font-medium mr-2">📅</span>
-          <span>Posted {formatDate(job.createdAt)}</span>
-        </div>
+
         {job.applications && job.applications.length > 0 && (
-          <div className="flex items-center text-sm text-gray-600">
-            <span className="font-medium mr-2">👥</span>
-            <span>{job.applications.length} applications received</span>
+          <div className="applications-info mb-4 p-3 bg-blue-50 rounded-lg">
+            <span className="text-sm text-blue-700">
+              {job.applications.length} application
+              {job.applications.length !== 1 ? "s" : ""} received
+            </span>
           </div>
         )}
-      </div>
 
-      {/* Application Form */}
-      {showApplicationForm && (
-        <div className="border-t pt-4 mb-4">
-          <h4 className="font-medium text-gray-900 mb-3">Apply for this job</h4>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your proposed amount (₹)
-              </label>
-              <input
-                type="number"
-                value={applicationData.proposedAmount}
-                onChange={(e) =>
-                  setApplicationData((prev) => ({
-                    ...prev,
-                    proposedAmount: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your rate"
-                min="0"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Message to customer
-              </label>
-              <textarea
-                value={applicationData.message}
-                onChange={(e) =>
-                  setApplicationData((prev) => ({
-                    ...prev,
-                    message: e.target.value,
-                  }))
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows="3"
-                placeholder="Explain why you're the right person for this job..."
-                maxLength="500"
-              />
-            </div>
-            <div className="flex gap-2">
+        {!showApplicationForm && (
+          <div className="card-actions flex gap-2 flex-wrap">
+            {/* Worker Actions */}
+            {canApply && showApplicationButton && (
               <Button
-                onClick={handleSubmitApplication}
-                disabled={isApplying}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                onClick={() => setShowApplicationForm(true)}
+                className="apply-button bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={loading.applying}
+              >
+                {loading.applying ? "Applying..." : "Apply Now"}
+              </Button>
+            )}
+
+            {job.hasApplied && userRole === "worker" && (
+              <Button variant="outline" disabled className="applied-button">
+                Applied ✓
+              </Button>
+            )}
+
+            {/* Customer Actions */}
+            {isOwner && (
+              <>
+                {onViewApplications && job.applications?.length > 0 && (
+                  <Button
+                    onClick={() => onViewApplications(job)}
+                    variant="outline"
+                    className="view-applications-button"
+                  >
+                    View Applications ({job.applications.length})
+                  </Button>
+                )}
+
+                {onEdit && job.status === "open" && (
+                  <Button
+                    onClick={() => onEdit(job)}
+                    variant="outline"
+                    className="edit-button"
+                  >
+                    Edit
+                  </Button>
+                )}
+
+                <Button
+                  onClick={handleDeleteJob}
+                  variant="outline"
+                  className="delete-button text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={loading.deleting}
+                >
+                  {loading.deleting ? "Deleting..." : "Delete"}
+                </Button>
+              </>
+            )}
+
+            {/* View Details for all users */}
+            <Button
+              variant="outline"
+              className="view-details-button"
+              onClick={() => window.open(`/jobs/${job._id}`, "_blank")}
+            >
+              View Details
+            </Button>
+          </div>
+        )}
+
+        {/* Application Form */}
+        {showApplicationForm && (
+          <div className="application-form mt-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <h4 className="form-title text-md font-semibold mb-3">
+              Apply for this job
+            </h4>
+
+            <div className="form-fields space-y-3">
+              <div className="cover-letter-field">
+                <label className="field-label block text-sm font-medium text-gray-700 mb-1">
+                  Cover Letter *
+                </label>
+                <textarea
+                  value={applicationData.coverLetter}
+                  onChange={(e) =>
+                    setApplicationData({
+                      ...applicationData,
+                      coverLetter: e.target.value,
+                    })
+                  }
+                  placeholder="Why are you the right person for this job?"
+                  className="form-textarea w-full p-2 border border-gray-300 rounded-md resize-none"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              <div className="form-row grid grid-cols-2 gap-3">
+                <div className="budget-field">
+                  <label className="field-label block text-sm font-medium text-gray-700 mb-1">
+                    Proposed Budget (₹)
+                  </label>
+                  <input
+                    type="number"
+                    value={applicationData.proposedBudget}
+                    onChange={(e) =>
+                      setApplicationData({
+                        ...applicationData,
+                        proposedBudget: e.target.value,
+                      })
+                    }
+                    placeholder={job.budget}
+                    className="form-input w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+
+                <div className="duration-field">
+                  <label className="field-label block text-sm font-medium text-gray-700 mb-1">
+                    Estimated Duration
+                  </label>
+                  <input
+                    type="text"
+                    value={applicationData.estimatedDuration}
+                    onChange={(e) =>
+                      setApplicationData({
+                        ...applicationData,
+                        estimatedDuration: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., 2 hours, 1 day"
+                    className="form-input w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="form-actions flex gap-2 mt-4">
+              <Button
+                onClick={handleApplyForJob}
+                disabled={isApplying || !applicationData.coverLetter.trim()}
+                className="submit-application bg-blue-600 hover:bg-blue-700 text-white"
               >
                 {isApplying ? "Submitting..." : "Submit Application"}
               </Button>
               <Button
                 onClick={() => setShowApplicationForm(false)}
                 variant="outline"
-                className="flex-1"
+                className="cancel-application"
               >
                 Cancel
               </Button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Action Buttons */}
-      {showActions && job.status === "open" && (
-        <div className="space-y-2">
-          {hasApplied ? (
-            <div className="text-center py-2">
-              <span className="text-green-600 font-medium">
-                ✓ Application submitted
-              </span>
-            </div>
-            ) : (
-            <Button
-              onClick={handleApplyClick}
-              className="w-full bg-blue-600 hover:bg-blue-700"
-            >
-              Apply for Job
-            </Button>
-          )}
-          </div>
-      )}
-
-      {/* Owner Actions for My Job Posts */}
-      {showOwnerActions && (
-        <div className="border-t pt-4">
-          <div className="flex justify-between items-center mb-3">
-            <h4 className="font-medium text-gray-900">Applications</h4>
-            <span className="text-sm text-gray-600">
-              {job.applications?.length || 0} received
-            </span>
-          </div>
-            {job.applications && job.applications.length > 0 ? (
-            <div className="space-y-3">
-              {job.applications.slice(0, 3).map((application) => (
-                <div key={application._id} className="border rounded-lg p-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {application.workerId?.fullName || "Worker"}
-                      </p>
-                      <p className="text-sm text-gray-600">
-                        {application.workerId?.profession} • ₹
-                        {application.proposedAmount}
-                      </p>
-                    </div>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        application.status === "accepted"
-                          ? "bg-green-100 text-green-800"
-                          : application.status === "rejected"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {application.status}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 mb-2">
-                    {application.message}
-                  </p>
-                  {application.status === "pending" && (
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-700 text-xs"
-                      >
-                        Accept
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-500 text-red-600 hover:bg-red-50 text-xs"
-                      >
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                ))}
-                {job.applications.length > 3 && (
-                  <p className="text-sm text-gray-600 text-center">
-                    +{job.applications.length - 3} more applications
-                  </p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-600 text-center py-4">
-              No applications yet
-            </p>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </Card>
   );
 }
