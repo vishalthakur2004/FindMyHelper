@@ -1,18 +1,26 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 const availabilitySchema = new mongoose.Schema(
   {
     day: {
       type: String,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      enum: [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ],
       required: true,
     },
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const userSchema = new mongoose.Schema(
@@ -37,81 +45,36 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['customer', 'worker'],
-      default: 'customer',
+      enum: ["customer", "worker"],
+      default: "customer",
     },
     profession: {
       type: String,
       required: function () {
-        return this.role === 'worker';
+        return this.role === "worker";
       },
       enum: [
-        // Home Services
-        'Plumber', 'Electrician', 'Carpenter', 'Painter', 'Mason', 'AC Technician',
-        'Appliance Repair Technician', 'Interior Designer', 'Pest Control Specialist',
-        'Roofer', 'Gardener', 'Home Cleaner', 'Sofa Cleaner', 'Glass Cleaner',
-        // Vehicle Services
-        'Mechanic', 'Car Washer', 'Bike Servicing', 'Auto Electrician', 'Car Interior Cleaning',
-        // Personal Services
-        'Beautician', 'Hairdresser', 'Makeup Artist', 'Massage Therapist', 'Personal Trainer', 'Dietitian',
-        // Household Help
-        'Cook', 'Nanny', 'Babysitter', 'Elderly Caregiver', 'Housemaid', 'Laundry/Dry Cleaning Pickup',
-        // Other Skilled Services
-        'CCTV Installer', 'Computer Technician', 'Mobile Repair Technician', 'Tailor', 'Locksmith',
-        'Refrigerator Repair', 'Washing Machine Repair',
-        // Logistics and Delivery
-        'Furniture Mover', 'Delivery Boy', 'Parcel Packing Helper',
-        // Tutoring & Education
-        'Home Tutor', 'Language Trainer', 'Music Teacher', 'Dance Instructor', 'Yoga Instructor'
+        "Plumber",
+        "Electrician",
+        "Carpenter",
+        "Painter",
+        "Mason",
+        "Technician",
+        "Home Cleaner",
+        "Mechanic",
       ],
     },
-    // serviceCategories: {
-    //   type: [String],
-    //   required: function () {
-    //     return this.role === "worker";
-    //   },
-    //   enum: [
-    //     "plumber",
-    //     "electrician",
-    //     "carpenter",
-    //     "painter",
-    //     "mason",
-    //     "ac-technician",
-    //     "appliance-repair",
-    //     "pest-control",
-    //     "gardener",
-    //     "cleaner",
-    //   ],
-    //   default: function () {
-    //     if (this.profession) {
-    //       const professionMap = {
-    //         Plumber: "plumber",
-    //         Electrician: "electrician",
-    //         Carpenter: "carpenter",
-    //         Painter: "painter",
-    //         Mason: "mason",
-    //         "AC Technician": "ac-technician",
-    //         "Appliance Repair Technician": "appliance-repair",
-    //         "Pest Control Specialist": "pest-control",
-    //         Gardener: "gardener",
-    //         "Home Cleaner": "cleaner",
-    //       };
-    //       return [professionMap[this.profession] || "cleaner"];
-    //     }
-    //     return [];
-    //   },
-    // },
     photo: {
       type: String,
       required: function () {
-        return this.role === 'worker';
+        return this.role === "worker";
       },
     },
     location: {
       type: {
         type: String,
-        enum: ['Point'],
-        default: 'Point',
+        enum: ["Point"],
+        default: "Point",
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
@@ -130,7 +93,7 @@ const userSchema = new mongoose.Schema(
     availabilityTimes: {
       type: [availabilitySchema],
       required: function () {
-        return this.role === 'worker';
+        return this.role === "worker";
       },
       default: [],
     },
@@ -141,6 +104,14 @@ const userSchema = new mongoose.Schema(
     isAvailable: {
       type: Boolean,
       default: true,
+    },
+    manualStatusOverride: {
+      type: Boolean,
+      default: false, // Whether the worker has manually set their status
+    },
+    lastStatusUpdate: {
+      type: Date,
+      default: Date.now,
     },
     avgRating: {
       type: Number,
@@ -159,16 +130,20 @@ const userSchema = new mongoose.Schema(
     experienceYears: {
       type: Number,
       default: 1,
-    },    
+    },
     reviews: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Review',
+        ref: "Review",
       },
     ],
     totalEarnings: {
       type: Number,
       default: 0,
+    },
+    locationPermissionGranted: {
+      type: Boolean,
+      default: false,
     },
     refreshToken: {
       type: String,
@@ -176,11 +151,11 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
 
   this.password = await bcrypt.hash(this.password, 10);
   next();
@@ -202,7 +177,7 @@ userSchema.methods.generateAccessToken = function () {
     process.env.ACCESS_TOKEN_SECRET,
     {
       expiresIn: process.env.ACCESS_TOKEN_EXPIRY,
-    }
+    },
   );
 };
 
@@ -214,12 +189,10 @@ userSchema.methods.generateRefreshToken = async function () {
     process.env.REFRESH_TOKEN_SECRET,
     {
       expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
+    },
   );
 };
 
-userSchema.index({ location: '2dsphere' });
+userSchema.index({ location: "2dsphere" });
 
-export const User = mongoose.model('User', userSchema);
-
-
+export const User = mongoose.model("User", userSchema);

@@ -6,7 +6,6 @@ import {
   updateProfilePhoto,
   updateUserLocation,
   getWorkerProfile,
-  findNearbyWorkers,
 } from "../controllers/user.controller.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
@@ -19,6 +18,5 @@ router.put("/update", authenticateUser, updateAccountDetails);
 router.put("/update-location", authenticateUser, updateUserLocation);
 router.put("/update-photo", authenticateUser, upload.single("photo"), updateProfilePhoto);
 router.get("/worker/:workerId", getWorkerProfile);
-router.get("/nearby-workers", authenticateUser, findNearbyWorkers);
 
 export default router;
