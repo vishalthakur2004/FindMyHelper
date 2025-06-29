@@ -1,10 +1,9 @@
 import express from "express";
 import {
-  createBookingRequest,
+  createBookingFromJobApplication,
   getWorkerBookings,
   getCustomerBookings,
   updateBookingStatus,
-  getNearbyWorkers,
   getBookingById,
 } from "../controllers/booking.controller.js";
 import { authenticateUser } from "../middlewares/auth.middleware.js";
@@ -15,13 +14,10 @@ const router = express.Router();
 router.use(authenticateUser);
 
 // Booking management
-router.post("/request", createBookingRequest);
+router.post("/request", createBookingFromJobApplication);
 router.get("/worker", getWorkerBookings);
 router.get("/customer", getCustomerBookings);
 router.get("/:bookingId", getBookingById);
 router.patch("/:bookingId/status", updateBookingStatus);
-
-// Worker discovery
-router.get("/nearby-workers", getNearbyWorkers);
 
 export default router;

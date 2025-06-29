@@ -12,6 +12,10 @@ const bookingSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    jobApplicationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JobApplication",
+    },
     serviceCategory: {
       type: String,
       required: true,
@@ -21,11 +25,9 @@ const bookingSchema = new mongoose.Schema(
         "carpenter",
         "painter",
         "mason",
-        "ac-technician",
-        "appliance-repair",
-        "pest-control",
-        "gardener",
-        "cleaner",
+        "technician",
+        "mechanic",
+        "home-cleaner",
       ],
     },
     status: {
@@ -45,19 +47,31 @@ const bookingSchema = new mongoose.Schema(
       type: {
         type: String,
         default: "Point",
+        enum: ["Point"],
       },
       coordinates: {
         type: [Number], // [longitude, latitude]
+        required: true,
+        validate: {
+          validator: (val) =>
+            Array.isArray(val) &&
+            val.length === 2 &&
+            val.every((num) => typeof num === "number"),
+          message: "Coordinates must be [longitude, latitude]",
+        },
       },
     },
     scheduledDate: {
       type: Date,
       required: true,
     },
-    completedAt: Date,
+    completedAt: {
+      type: Date,
+    },
     amount: {
       type: Number,
       required: true,
+      min: 0,
     },
     paymentMethod: {
       type: String,
@@ -72,7 +86,9 @@ const bookingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    feedback: String,
+    feedback: {
+      type: String,
+    },
     paymentStatus: {
       type: String,
       enum: ["pending", "paid"],
@@ -81,13 +97,23 @@ const bookingSchema = new mongoose.Schema(
     workerEarning: {
       type: Number,
       default: 0, // In ₹
+      min: 0,
     },
   },
   {
-  timestamps: true,
-  },
+    timestamps: true,
+  }
 );
 
+// Geo index for location-based queries
 bookingSchema.index({ location: '2dsphere' });
+
+// Automatically set completedAt when booking is marked as completed
+bookingSchema.pre('save', function (next) {
+  if (this.isModified('status') && this.status === 'completed' && !this.completedAt) {
+    this.completedAt = new Date();
+  }
+  next();
+});
 
 export const Booking = mongoose.model('Booking', bookingSchema);

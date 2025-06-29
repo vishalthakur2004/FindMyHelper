@@ -1,83 +1,71 @@
 import { Booking } from "../models/booking.model.js";
+import { JobPost } from "../models/jobPost.model.js";
+import { JobApplication } from "../models/jobApplication.model.js";
 import { User } from "../models/user.model.js";
 
-export const createBookingRequest = async (req, res) => {
+export const createBookingFromJobApplication = async (req, res) => {
   try {
-    const {
-      workerId,
-      serviceCategory,
-      scheduledDate,
-      amount,
-      paymentMethod = "cash",
-    } = req.body;
-
     const customerId = req.user._id;
-
-    // Validate required fields
-    if (!workerId || !serviceCategory || !scheduledDate || !amount) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Worker ID, service category, scheduled date, and amount are required",
-      });
-    }
+    const { jobId, applicationId } = req.body;
 
     // Verify customer role
     if (req.user.role !== "customer") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Customer account required.",
-      });
+      return res.status(403).json({ message: "Only customers can create bookings" });
     }
 
-    // Verify worker exists and is available
-    const worker = await User.findById(workerId);
-    if (!worker || worker.role !== "worker") {
-      return res.status(404).json({
-        success: false,
-        message: "Worker not found",
-      });
+    // Validate job
+    const job = await JobPost.findOne({ _id: jobId, customerId });
+    if (!job) {
+      return res.status(404).json({ message: "Job not found or not authorized" });
     }
 
-    // Get customer location
-    const customer = await User.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({
-        success: false,
-        message: "Customer not found",
-      });
+    // Validate application
+    const application = await JobApplication.findOne({
+      _id: applicationId,
+      jobId,
+      status: "pending",
+    }).populate("workerId");
+
+    if (!application) {
+      return res.status(404).json({ message: "Job application not found or already handled" });
     }
 
-    // Create booking request
+    // Create booking
     const booking = await Booking.create({
       customerId,
-      workerId,
-      serviceCategory: serviceCategory.toLowerCase(),
-      scheduledDate: new Date(scheduledDate),
-      amount: parseFloat(amount),
-      paymentMethod,
-      location: customer.location,
+      workerId: application.workerId._id,
+      serviceCategory: job.serviceCategory,
+      scheduledDate: new Date(application.availabilityDate),
+      amount: application.expectedRate,
+      location: job.location,
+      address: job.address,
+      description: job.description,
       status: "pending",
-      description: req.body.description,
-      urgent: req.body.urgent,
+      urgent: false, // Default, can be updated
+      jobId: job._id,
     });
 
-    // Populate the booking with user details
+    // Update job post to mark it assigned
+    job.status = "assigned";
+    job.assignedWorker = application.workerId._id;
+    await job.save();
+
+    // Update application status
+    application.status = "accepted";
+    await application.save();
+
     const populatedBooking = await Booking.findById(booking._id)
       .populate("customerId", "fullName email address")
       .populate("workerId", "fullName profession photo");
 
     res.status(201).json({
       success: true,
-      message: "Booking request sent successfully",
+      message: "Booking created from job application",
       booking: populatedBooking,
     });
   } catch (error) {
-    console.error("Create booking request error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to create booking request",
-    });
+    console.error("Create booking from job application error:", error);
+    res.status(500).json({ message: "Failed to create booking" });
   }
 };
 
@@ -290,122 +278,6 @@ export const updateBookingStatus = async (req, res) => {
     });
   }
 };
-
-export const getNearbyWorkers = async (req, res) => {
-  try {
-    const customerId = req.user._id;
-    const { profession, radius = 10000, page = 1, limit = 20 } = req.query;
-
-    // Get customer location
-    const customer = await User.findById(customerId);
-    if (!customer || customer.role !== "customer") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied. Customer account required.",
-      });
-    }
-
-    // Build query for workers
-    const query = { role: "worker" };
-    if (profession) {
-      query.profession = new RegExp(profession, "i");
-    }
-
-    // Build aggregation pipeline to find nearby workers
-    const pipeline = [
-      {
-        $geoNear: {
-          near: customer.location,
-          distanceField: "distance",
-          maxDistance: parseInt(radius),
-          spherical: true,
-          query: query,
-        },
-      },
-      {
-        $lookup: {
-          from: "reviews",
-          localField: "_id",
-          foreignField: "workerId",
-          as: "reviews",
-        },
-      },
-      {
-        $addFields: {
-          avgRating: { $avg: "$reviews.rating" },
-          reviewCount: { $size: "$reviews" },
-        },
-      },
-      {
-        $project: {
-          _id: 1,
-          fullName: 1,
-          profession: 1,
-          photo: 1,
-          address: 1,
-          availabilityTimes: 1,
-          bookingsAday: 1,
-          distance: 1,
-          avgRating: { $ifNull: ["$avgRating", 0] },
-          reviews: {
-            $slice: [
-              {
-                $map: {
-                  input: "$reviews",
-                  as: "review",
-                  in: {
-                    _id: "$$review._id",
-                    rating: "$$review.rating",
-                    comment: "$$review.comment",
-                    customer: "$$review.customerId",
-                  },
-                },
-              },
-              3,
-            ],
-          },
-        },
-      },
-      {
-        $sort: { distance: 1 },
-      },
-      {
-        $skip: (parseInt(page) - 1) * parseInt(limit),
-      },
-      {
-        $limit: parseInt(limit),
-      },
-    ];
-
-    const workers = await User.aggregate(pipeline);
-
-    // Populate customer details in reviews
-    for (let worker of workers) {
-      if (worker.reviews && worker.reviews.length > 0) {
-        await User.populate(worker, {
-          path: "reviews.customer",
-          select: "fullName photo",
-        });
-      }
-    }
-
-    res.status(200).json({
-      success: true,
-      workers,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: workers.length,
-      },
-    });
-  } catch (error) {
-    console.error("Get nearby workers error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch nearby workers",
-    });
-  }
-};  
 
 export const getBookingById = async (req, res) => {
   try {
