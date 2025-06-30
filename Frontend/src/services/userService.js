@@ -41,9 +41,15 @@ export const userService = {
   },
 
   // Get nearby workers
-  getNearbyWorkers: async (latitude, longitude, radius = 10) => {
+  getNearbyWorkers: async (latitude, longitude, radius = 10, filters = {}) => {
+    const params = new URLSearchParams({
+      lat: latitude,
+      lng: longitude,
+      radius,
+      ...filters,
+    });
     const response = await api.get(
-      `/users/workers/nearby?lat=${latitude}&lng=${longitude}&radius=${radius}`,
+      `/users/workers/nearby?${params.toString()}`,
     );
     return response;
   },
