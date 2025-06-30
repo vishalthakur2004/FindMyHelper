@@ -9,13 +9,21 @@ import {
   Clock,
   Eye,
   TrendingUp,
+  Navigation,
+  Target,
+  MapPin,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import LocationPermission from "../components/LocationPermission";
 import { fetchBookings } from "../store/slices/bookingSlice";
 import { fetchJobs } from "../store/slices/jobSlice";
+import { locationService } from "../services/locationService";
 
 const WorkerHomePage = () => {
+  const [showLocationPermission, setShowLocationPermission] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [nearbyJobsCount, setNearbyJobsCount] = useState(0);
   const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.user);
   const { bookings, loading: bookingsLoading } = useSelector(
@@ -26,7 +34,38 @@ const WorkerHomePage = () => {
   useEffect(() => {
     dispatch(fetchBookings({ limit: 5 }));
     dispatch(fetchJobs({ limit: 10 }));
+    checkLocationAndShowNearbyJobs();
   }, [dispatch]);
+
+  const checkLocationAndShowNearbyJobs = async () => {
+    try {
+      const permission = await locationService.checkLocationPermission();
+      if (permission === "granted") {
+        const position = await locationService.getFreshLocation();
+        setCurrentLocation(position);
+
+        // Get nearby jobs count for display
+        try {
+          const nearbyData = await locationService.getNearbyJobs(
+            position.latitude,
+            position.longitude,
+            25,
+          );
+          setNearbyJobsCount(nearbyData.jobs?.length || 0);
+        } catch (error) {
+          console.log("Failed to get nearby jobs count");
+        }
+      }
+    } catch (error) {
+      console.log("Location check failed:", error);
+    }
+  };
+
+  const handleLocationGranted = (location) => {
+    setCurrentLocation(location);
+    setShowLocationPermission(false);
+    checkLocationAndShowNearbyJobs();
+  };
 
   const upcomingBookings = bookings.filter(
     (booking) =>
@@ -172,6 +211,56 @@ const WorkerHomePage = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Quick Actions
               </h2>
+
+              {/* Location-based prompt */}
+              {!currentLocation && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Target className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-green-900 mb-1">
+                        Find Jobs Near You
+                      </h4>
+                      <p className="text-sm text-green-700 mb-3">
+                        Enable location access to discover job opportunities in
+                        your area
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowLocationPermission(true)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Navigation className="h-4 w-4 mr-2" />
+                        Enable Location
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nearby jobs indicator */}
+              {currentLocation && nearbyJobsCount > 0 && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-blue-600" />
+                      <span className="font-medium text-blue-900">
+                        {nearbyJobsCount} jobs nearby
+                      </span>
+                    </div>
+                    <Link to="/find-jobs">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-blue-300 text-blue-700"
+                      >
+                        View All
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <div className="grid sm:grid-cols-3 gap-4">
                 <Link to="/find-jobs">
                   <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group">
@@ -180,7 +269,9 @@ const WorkerHomePage = () => {
                       Find Jobs
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Browse available opportunities
+                      {currentLocation
+                        ? "Browse jobs near you"
+                        : "Browse available opportunities"}
                     </p>
                   </div>
                 </Link>
