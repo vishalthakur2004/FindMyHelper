@@ -1,21 +1,66 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
-import { Search, Calendar, Star, MapPin, Clock, Plus } from "lucide-react";
+import {
+  Search,
+  Calendar,
+  Star,
+  MapPin,
+  Clock,
+  Plus,
+  Navigation,
+  Target,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import LocationPermission from "../components/LocationPermission";
 import { fetchBookings } from "../store/slices/bookingSlice";
+import { locationService } from "../services/locationService";
 import { JOB_CATEGORIES } from "../constants";
 
 const CustomerHomePage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showLocationPermission, setShowLocationPermission] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [nearbyWorkersCount, setNearbyWorkersCount] = useState(0);
   const dispatch = useDispatch();
   const { userInfo } = useSelector((state) => state.user);
   const { bookings, loading } = useSelector((state) => state.bookings);
 
   useEffect(() => {
     dispatch(fetchBookings({ limit: 5 }));
+    checkLocationAndShowNearbyFeatures();
   }, [dispatch]);
+
+  const checkLocationAndShowNearbyFeatures = async () => {
+    try {
+      const permission = await locationService.checkLocationPermission();
+      if (permission === "granted") {
+        const position = await locationService.getFreshLocation();
+        setCurrentLocation(position);
+
+        // Get nearby workers count for display
+        try {
+          const nearbyData = await locationService.getNearbyWorkers(
+            position.latitude,
+            position.longitude,
+            10,
+          );
+          setNearbyWorkersCount(nearbyData.workers?.length || 0);
+        } catch (error) {
+          console.log("Failed to get nearby workers count");
+        }
+      }
+    } catch (error) {
+      console.log("Location check failed:", error);
+    }
+  };
+
+  const handleLocationGranted = (location) => {
+    setCurrentLocation(location);
+    setShowLocationPermission(false);
+    checkLocationAndShowNearbyFeatures();
+  };
 
   const upcomingBookings = bookings.filter(
     (booking) => booking.status === "confirmed" || booking.status === "pending",
@@ -106,6 +151,56 @@ const CustomerHomePage = () => {
               <h2 className="text-xl font-semibold text-gray-900 mb-4">
                 Quick Actions
               </h2>
+
+              {/* Location-based prompt */}
+              {!currentLocation && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <Target className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-blue-900 mb-1">
+                        Find Workers Near You
+                      </h4>
+                      <p className="text-sm text-blue-700 mb-3">
+                        Enable location access to discover trusted professionals
+                        in your area
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowLocationPermission(true)}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Navigation className="h-4 w-4 mr-2" />
+                        Enable Location
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Nearby workers indicator */}
+              {currentLocation && nearbyWorkersCount > 0 && (
+                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-green-900">
+                        {nearbyWorkersCount} workers nearby
+                      </span>
+                    </div>
+                    <Link to="/find-workers">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-green-300 text-green-700"
+                      >
+                        View All
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
+
               <div className="grid sm:grid-cols-2 gap-4">
                 <Link to="/find-workers">
                   <div className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:shadow-md transition-all group">
@@ -114,7 +209,9 @@ const CustomerHomePage = () => {
                       Find Workers
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Browse available service providers
+                      {currentLocation
+                        ? "Browse workers near you"
+                        : "Browse available service providers"}
                     </p>
                   </div>
                 </Link>
