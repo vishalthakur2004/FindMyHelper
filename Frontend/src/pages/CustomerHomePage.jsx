@@ -389,6 +389,14 @@ const CustomerHomePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Location Permission Modal */}
+      <LocationPermission
+        showModal={showLocationPermission}
+        onLocationGranted={handleLocationGranted}
+        onLocationDenied={() => setShowLocationPermission(false)}
+        onClose={() => setShowLocationPermission(false)}
+      />
     </div>
   );
 };
