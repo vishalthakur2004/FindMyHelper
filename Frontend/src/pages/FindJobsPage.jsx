@@ -7,83 +7,166 @@ import {
   Clock,
   Eye,
   Send,
+  Target,
+  Navigation,
 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
+import NearbySearch from "../components/NearbySearch";
+import LocationSelector from "../components/LocationSelector";
+import { locationService } from "../services/locationService";
 import { JOB_CATEGORIES, PRICE_RANGES } from "../constants";
+import { useToast } from "../hooks/useToast";
 
 const FindJobsPage = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showNearbySearch, setShowNearbySearch] = useState(false);
+  const [searchLocation, setSearchLocation] = useState(null);
+  const { showError } = useToast();
+
   const [filters, setFilters] = useState({
     search: "",
     category: "",
     location: "",
     budget: "",
-    sortBy: "createdAt",
+    sortBy: "distance", // Default to distance when location is available
   });
 
-  // Mock data for demonstration
+  const fetchJobs = async () => {
+    setLoading(true);
+    try {
+      let jobData;
+
+      if (searchLocation && filters.sortBy === "distance") {
+        // Use location-based search
+        jobData = await locationService.getNearbyJobs(
+          searchLocation.latitude,
+          searchLocation.longitude,
+          25, // 25km radius
+          {
+            search: filters.search,
+            category: filters.category,
+            budget: filters.budget,
+          },
+        );
+        setJobs(jobData.jobs || []);
+      } else {
+        // Use mock data for demonstration - in real app, this would be an API call
+        const mockJobs = [
+          {
+            id: 1,
+            title: "House Deep Cleaning Service",
+            description:
+              "Need a thorough deep cleaning of my 3-bedroom house. Includes kitchen, bathrooms, and all living areas.",
+            category: "Cleaning",
+            budget: 150,
+            location: "Downtown San Francisco",
+            postedDate: "2024-01-15",
+            deadline: "2024-01-20",
+            customer: { name: "Sarah Johnson", rating: 4.8 },
+            applicants: 5,
+            status: "open",
+            coordinates: { lat: 37.7749, lng: -122.4194 },
+          },
+          {
+            id: 2,
+            title: "Kitchen Faucet Repair",
+            description:
+              "My kitchen faucet is leaking and needs immediate repair. Must be available this weekend.",
+            category: "Plumbing",
+            budget: 120,
+            location: "Mission District",
+            postedDate: "2024-01-14",
+            deadline: "2024-01-18",
+            customer: { name: "Mike Chen", rating: 4.9 },
+            applicants: 8,
+            status: "urgent",
+            coordinates: { lat: 37.7598, lng: -122.4148 },
+          },
+          {
+            id: 3,
+            title: "Garden Landscaping Project",
+            description:
+              "Complete backyard makeover including lawn, plants, and decorative elements.",
+            category: "Gardening",
+            budget: 500,
+            location: "Sunset District",
+            postedDate: "2024-01-13",
+            deadline: "2024-01-25",
+            customer: { name: "Emily Davis", rating: 4.7 },
+            applicants: 12,
+            status: "open",
+            coordinates: { lat: 37.7559, lng: -122.4689 },
+          },
+        ];
+
+        // Add distance calculation if search location is available
+        if (searchLocation) {
+          const jobsWithDistance = mockJobs.map((job) => {
+            if (job.coordinates) {
+              const distance = locationService.calculateDistance(
+                searchLocation.latitude,
+                searchLocation.longitude,
+                job.coordinates.lat,
+                job.coordinates.lng,
+              );
+              return {
+                ...job,
+                distance,
+                distanceFormatted: locationService.formatDistance(distance),
+              };
+            }
+            return job;
+          });
+          setJobs(jobsWithDistance);
+        } else {
+          setJobs(mockJobs);
+        }
+      }
+    } catch (error) {
+      showError("Failed to fetch jobs");
+      setJobs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setJobs([
-      {
-        id: 1,
-        title: "House Deep Cleaning Service",
-        description:
-          "Need a thorough deep cleaning of my 3-bedroom house. Includes kitchen, bathrooms, and all living areas.",
-        category: "Cleaning",
-        budget: 150,
-        location: "Downtown San Francisco",
-        postedDate: "2024-01-15",
-        deadline: "2024-01-20",
-        customer: { name: "Sarah Johnson", rating: 4.8 },
-        applicants: 5,
-        status: "open",
-      },
-      {
-        id: 2,
-        title: "Kitchen Faucet Repair",
-        description:
-          "My kitchen faucet is leaking and needs immediate repair. Must be available this weekend.",
-        category: "Plumbing",
-        budget: 120,
-        location: "Mission District",
-        postedDate: "2024-01-14",
-        deadline: "2024-01-18",
-        customer: { name: "Mike Chen", rating: 4.9 },
-        applicants: 8,
-        status: "urgent",
-      },
-      {
-        id: 3,
-        title: "Garden Landscaping Project",
-        description:
-          "Complete backyard makeover including lawn, plants, and decorative elements.",
-        category: "Gardening",
-        budget: 500,
-        location: "Sunset District",
-        postedDate: "2024-01-13",
-        deadline: "2024-01-25",
-        customer: { name: "Emily Davis", rating: 4.7 },
-        applicants: 12,
-        status: "open",
-      },
-    ]);
-  }, []);
+    fetchJobs();
+  }, [searchLocation, filters]);
 
   const handleSearch = (e) => {
     e.preventDefault();
-    setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-    }, 1000);
+    fetchJobs();
   };
 
   const handleApply = (jobId) => {
     alert(
       `Applied to job ${jobId}! This would normally open an application modal.`,
     );
+  };
+
+  const handleNearbyResults = (data) => {
+    setJobs(data.jobs || []);
+    setShowNearbySearch(false);
+  };
+
+  const handleLocationSelect = (location) => {
+    setSearchLocation(location);
+    if (location) {
+      setFilters((prev) => ({ ...prev, sortBy: "distance" }));
+    }
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: "",
+      category: "",
+      location: "",
+      budget: "",
+      sortBy: searchLocation ? "distance" : "createdAt",
+    });
   };
 
   const getStatusColor = (status) => {
@@ -116,9 +199,19 @@ const FindJobsPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <h1 className="text-2xl font-bold text-blue-600">Find Jobs</h1>
-            <Button onClick={() => window.history.back()} variant="outline">
-              Back
-            </Button>
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={() => setShowNearbySearch(!showNearbySearch)}
+                variant={showNearbySearch ? "default" : "outline"}
+                size="sm"
+              >
+                <Target className="h-4 w-4 mr-2" />
+                Nearby Search
+              </Button>
+              <Button onClick={() => window.history.back()} variant="outline">
+                Back
+              </Button>
+            </div>
           </div>
         </div>
       </header>
