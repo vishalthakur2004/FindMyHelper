@@ -1,19 +1,19 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
-import storage from 'redux-persist/lib/storage';
-import { combineReducers } from '@reduxjs/toolkit';
+import { configureStore } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
+import { combineReducers } from "@reduxjs/toolkit";
 
 // Import slices
-import userSlice from './slices/userSlice';
-import jobSlice from './slices/jobSlice';
-import bookingSlice from './slices/bookingSlice';
-import reviewSlice from './slices/reviewSlice';
-import uiSlice from './slices/uiSlice';
+import userSlice from "./slices/userSlice";
+import jobSlice from "./slices/jobSlice";
+import bookingSlice from "./slices/bookingSlice";
+import reviewSlice from "./slices/reviewSlice";
+import uiSlice from "./slices/uiSlice";
 
 const persistConfig = {
-  key: 'root',
+  key: "root",
   storage,
-  whitelist: ['user'], // Only persist user data
+  whitelist: ["user"], // Only persist user data
 };
 
 const rootReducer = combineReducers({
@@ -31,12 +31,10 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
+        ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
       },
     }),
-  devTools: process.env.NODE_ENV !== 'production',
+  devTools: process.env.NODE_ENV !== "production",
 });
 
 export const persistor = persistStore(store);
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
