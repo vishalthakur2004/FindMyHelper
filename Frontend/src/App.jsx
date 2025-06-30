@@ -15,10 +15,19 @@ import LoginPage from "./pages/LoginPage.jsx";
 import LogoutPage from "./pages/LogoutPage.jsx";
 import CustomerHomePage from "./pages/CustomerHomePage.jsx";
 import WorkerHomePage from "./pages/WorkerHomePage.jsx";
-import IntegrationTestPage from "./pages/IntegrationTestPage.jsx";
+
+import JobApplicationsPage from "./pages/JobApplicationsPage.jsx";
+import ReviewsPage from "./pages/ReviewsPage.jsx";
+import ProfilePage from "./pages/ProfilePage.jsx";
+import WorkerProfilePage from "./pages/WorkerProfilePage.jsx";
+import FindWorkersPage from "./pages/FindWorkersPage.jsx";
+import FindJobsPage from "./pages/FindJobsPage.jsx";
 
 // Layout
 import AuthLayout from "./components/authLayout.jsx";
+import ErrorBoundary from "./components/ui/error-boundary.jsx";
+import { ToastContainer } from "./components/ui/toast.jsx";
+import { useToast } from "./hooks/useToast.js";
 
 // Dashboard redirection based on role
 function DashboardRedirect() {
@@ -34,112 +43,156 @@ function DashboardRedirect() {
 }
 
 function App() {
+  const { toasts, removeToast } = useToast();
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/"
-        element={
-          <AuthLayout authentication={false}>
-            <LandingPage />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/check-phone-number"
-        element={
-          <AuthLayout authentication={false}>
-            <CheckPhoneNumber />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/register-option"
-        element={
-          <AuthLayout authentication={false}>
-            <RegisterOption />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/register-customer"
-        element={
-          <AuthLayout authentication={false}>
-            <RegisterCustomer />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/register-worker"
-        element={
-          <AuthLayout authentication={false}>
-            <RegisterWorker />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/login"
-        element={
-          <AuthLayout authentication={false}>
-            <LoginPage />
-          </AuthLayout>
-        }
-      />
+    <ErrorBoundary>
+      <Routes>
+        {/* Public Routes */}
+        <Route
+          path="/"
+          element={
+            <AuthLayout authentication={false}>
+              <LandingPage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/check-phone-number"
+          element={
+            <AuthLayout authentication={false}>
+              <CheckPhoneNumber />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/register-option"
+          element={
+            <AuthLayout authentication={false}>
+              <RegisterOption />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/register-customer"
+          element={
+            <AuthLayout authentication={false}>
+              <RegisterCustomer />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/register-worker"
+          element={
+            <AuthLayout authentication={false}>
+              <RegisterWorker />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <AuthLayout authentication={false}>
+              <LoginPage />
+            </AuthLayout>
+          }
+        />
 
-      {/* Authenticated Routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <AuthLayout authentication={true}>
-            <DashboardRedirect />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/customer-home"
-        element={
-          <AuthLayout authentication={true}>
-            <CustomerHomePage />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/worker-home"
-        element={
-          <AuthLayout authentication={true}>
-            <WorkerHomePage />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/test-integration"
-        element={
-          <AuthLayout authentication={true}>
-            <IntegrationTestPage />
-          </AuthLayout>
-        }
-      />
-      <Route
-        path="/logout"
-        element={
-          <AuthLayout authentication={true}>
-            <LogoutPage />
-          </AuthLayout>
-        }
-      />
+        {/* Authenticated Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            <AuthLayout authentication={true}>
+              <DashboardRedirect />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/customer-home"
+          element={
+            <AuthLayout authentication={true}>
+              <CustomerHomePage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/worker-home"
+          element={
+            <AuthLayout authentication={true}>
+              <WorkerHomePage />
+            </AuthLayout>
+          }
+        />
 
-      {/* Informational Pages (No Auth Required) */}
-      <Route path="/about-us" element={<AboutUs />} />
-      <Route path="/how-it-works" element={<HowItWorks />} />
-      <Route path="/services" element={<Services />} />
-      <Route path="/contact" element={<Contact />} />
+        <Route
+          path="/logout"
+          element={
+            <AuthLayout authentication={true}>
+              <LogoutPage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/job-applications"
+          element={
+            <AuthLayout authentication={true}>
+              <JobApplicationsPage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/reviews"
+          element={
+            <AuthLayout authentication={true}>
+              <ReviewsPage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <AuthLayout authentication={true}>
+              <ProfilePage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/worker-profile/:workerId"
+          element={
+            <AuthLayout authentication={true}>
+              <WorkerProfilePage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/find-workers"
+          element={
+            <AuthLayout authentication={true}>
+              <FindWorkersPage />
+            </AuthLayout>
+          }
+        />
+        <Route
+          path="/find-jobs"
+          element={
+            <AuthLayout authentication={true}>
+              <FindJobsPage />
+            </AuthLayout>
+          }
+        />
 
-      {/* Fallback route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* Informational Pages (No Auth Required) */}
+        <Route path="/about-us" element={<AboutUs />} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/services" element={<Services />} />
+        <Route path="/contact" element={<Contact />} />
+
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+    </ErrorBoundary>
   );
 }
 
-export default App;
-
+export default App; 
